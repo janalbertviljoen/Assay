@@ -330,6 +330,9 @@ def plot_heatmap(
     return figure
 
 
+_LONG_LEGEND = 3  # legend entries after which the figure title moves to the left
+
+
 def plot_small_multiples(
     df: pd.DataFrame,
     *,
@@ -443,7 +446,10 @@ def plot_small_multiples(
             fontsize=8,
             frameon=False,
         )
-    figure.suptitle(title, fontsize=11)
+    if len(handles) > _LONG_LEGEND:  # it would run into a centred title
+        figure.suptitle(title, fontsize=11, x=0.01, ha="left")
+    else:
+        figure.suptitle(title, fontsize=11)
     figure.tight_layout()
     return figure
 

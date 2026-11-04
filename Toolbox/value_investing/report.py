@@ -35,7 +35,7 @@ Dependency rule
 pandas, ``skatkis.report`` and ``value_investing.holding``.
 """
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
@@ -154,8 +154,8 @@ class ReportInputs:
         fill the rule descriptions.
     figures : Mapping[str, Path]
         Saved figures: ``yearly``, ``rules``, ``weighting``, ``contents``,
-        ``pick_prices``, ``trade_amounts``, ``next_prices``, ``peers`` (when there is a
-        peer group) and ``value_<start year>`` per scenario.
+        ``pick_prices``, ``trade_amounts``, ``next_prices``, ``worst_prices``, ``peers``
+        (when there is a peer group) and ``value_<start year>`` per scenario.
     compare : Sequence[str]
         The comparisons: the index's benchmark first, then ``BRK-B``.
     amount : float
@@ -166,9 +166,9 @@ class ReportInputs:
         Valuation date.
     threshold : float
         Score share at or below which a holding is sold in part.
-    tier_ratio : float
-        The share of ``threshold`` below which the worst list colours a score Red
-        (``[report] tier_ratio``).
+    tier_cutoffs : Sequence[float]
+        The 0-to-1 scores above which a score is Green, Amber and Red; at or below the
+        last it is Black (``[report] tier_cutoffs``).
     verdict_band : float
         The weight-gap rank correlation above which the weighting favours the rules
         that told winners from losers, and below minus which it favours the wrong ones.
@@ -176,6 +176,13 @@ class ReportInputs:
         A notice put before the section that states figures written out in the text,
         when they were produced with another model configuration or data date; empty
         when they match.
+    stress : pd.DataFrame, optional
+        ``holding.winner_stress`` output; the testing section's winners-removed
+        subsection is left out when missing.
+    ranking : pd.DataFrame, optional
+        ``rank``, ``symbol``, ``gics_sector``, ``score``, ``score_share`` of every
+        scored company on the latest score date (``evaluation.ranking`` with the sector
+        and the 0-to-1 score); the appendix listing it is left out when missing.
     """
 
     held: BuyAndHold
@@ -203,9 +210,11 @@ class ReportInputs:
     picks: int
     end: pd.Timestamp
     threshold: float
-    tier_ratio: float
+    tier_cutoffs: Sequence[float]
     verdict_band: float
     static_note: str = ""
+    stress: pd.DataFrame | None = None
+    ranking: pd.DataFrame | None = None
 
 
 def report_facts(inputs: ReportInputs, names: Mapping[str, str]) -> dict[str, str]:
@@ -281,6 +290,7 @@ def report_facts(inputs: ReportInputs, names: Mapping[str, str]) -> dict[str, st
     if inputs.peers is not None:
         facts.update(_peer_facts(inputs, inputs.peers, names))
     facts.update(_lookahead_facts(inputs))
+    facts.update(_stress_facts(inputs))
     reference = str(inputs.reference)
     facts["ref_start"] = reference
     for key in [k for k in list(facts) if k.endswith(f"_{reference}")]:
@@ -359,8 +369,11 @@ def _wallet_facts(inputs: ReportInputs) -> dict[str, str]:
         "sold_usd": f"{float(sales['usd'].sum()):,.0f}",
         "next_score_date": f"{pd.Timestamp(picks['score_date'].iloc[0]):%d %B %Y}",
         "next_picks": _listing([_full(inputs, str(s)) for s in picks["symbol"]]),
-        "tier_edge": f"{inputs.threshold * inputs.tier_ratio:g}",
+        "tier_green": f"{inputs.tier_cutoffs[0]:g}",
+        "tier_amber": f"{inputs.tier_cutoffs[1]:g}",
+        "tier_red": f"{inputs.tier_cutoffs[2]:g}",
         "worst_count": str(len(worst)),
+        "ranked_count": str(len(inputs.ranking)) if inputs.ranking is not None else "0",
         "worst_list": _listing([_full(inputs, str(s)) for s in worst["symbol"]]),
     }
 
@@ -568,6 +581,13 @@ def build_report(
                 caption=fill(text["selling"]["worst_caption"]),
                 label="tab:worst",
             ),
+            figures=[
+                ReportFigure(
+                    inputs.figures["worst_prices"],
+                    fill(text["selling"]["worst_figure"]),
+                    label="fig:worst-prices",
+                )
+            ],
             label="sec:worst",
         ),
         Section(
@@ -581,6 +601,7 @@ def build_report(
                 fill(text["testing"]["table_caption"]),
                 "tab:testing",
             ),
+            subsections=_stress_sections(inputs, text, fill),
             label="sec:testing",
         ),
         Section(
@@ -639,6 +660,7 @@ def build_report(
             ),
             label="app:purchases",
         ),
+        *_ranking_sections(inputs, text, fill),
         Section(
             title=fill(text["contents"]["appendix_title"]),
             text="",
@@ -719,6 +741,105 @@ def build_report(
         contents=False,
     )
     return write_latex(folder / "report.tex", document)
+
+
+def _stress_sections(
+    inputs: ReportInputs, text: Mapping[str, Any], fill: Callable[[object], str]
+) -> list[Section]:
+    """Return the winners-removed subsection, or none when the run was not made."""
+    if inputs.stress is None or inputs.stress.empty:
+        return []
+    return [
+        Section(
+            title=fill(text["testing"]["winners_title"]),
+            text=fill(text["testing"]["winners_text"]),
+            table=replace(
+                _stress_table(inputs.stress),
+                caption=fill(text["testing"]["winners_caption"]),
+                label="tab:winners",
+            ),
+        )
+    ]
+
+
+def _ranking_sections(
+    inputs: ReportInputs, text: Mapping[str, Any], fill: Callable[[object], str]
+) -> list[Section]:
+    """Return the appendix that ranks every scored company, or none without a ranking."""
+    if inputs.ranking is None or inputs.ranking.empty:
+        return []
+    return [
+        Section(
+            title=fill(text["ranking"]["title"]),
+            text=fill(text["ranking"]["text"]),
+            table=replace(
+                _ranking_table(inputs, inputs.ranking),
+                caption=fill(text["ranking"]["caption"]),
+                label="tab:ranking",
+            ),
+            label="app:ranking",
+        )
+    ]
+
+
+def _ranking_table(inputs: ReportInputs, ranking: pd.DataFrame) -> Table:
+    """Return every scored company by 0-to-1 score, with its colour and a mark on the picks."""
+    picks = {str(s) for s in inputs.next_picks["symbol"]}
+    rows = [
+        [
+            f"{int(r['rank'])}",
+            _full(inputs, str(r["symbol"])),
+            str(r["gics_sector"]),
+            f"{float(r['score_share']):.2f}",
+            f"{float(r['score']):.1f}",
+            _tier(float(r["score_share"]), inputs.tier_cutoffs),
+            "Pick" if str(r["symbol"]) in picks else "",
+        ]
+        for r in ranking.to_dict("records")
+    ]
+    return Table(
+        header=[
+            "Rank",
+            "Company",
+            "Sector",
+            "Score 0 to 1",
+            "Score",
+            "Colour",
+            "Next pick",
+        ],
+        rows=rows,
+        columns="r p{4.4cm} p{2.8cm} r r l l",
+        fills=_TIER_FILLS,
+    )
+
+
+def _stress_facts(inputs: ReportInputs) -> dict[str, str]:
+    """Return the removed companies, largest winner first, for the text."""
+    stress = inputs.stress
+    if stress is None or stress.empty:
+        return {}
+    most = int(stress["removed_count"].max())
+    symbols = str(stress.loc[stress["removed_count"] == most, "symbols"].tolist()[0])
+    if not symbols:
+        return {}
+    return {"removed": _listing([_full(inputs, s) for s in symbols.split(", ")])}
+
+
+def _stress_table(stress: pd.DataFrame) -> Table:
+    """Return the excess a year per start year and number of winners removed."""
+    wide = stress.pivot_table(
+        index="scenario", columns="removed_count", values="excess"
+    )
+    header = ["Start", "As it is"] + [f"Without {int(c)}" for c in wide.columns[1:]]
+    rows = [
+        [str(start)] + [f"{float(v) * 100:+.1f}" for v in row]
+        for start, row in wide.iterrows()
+    ]
+    return Table(
+        header=header,
+        rows=rows,
+        columns="l" + " r" * (len(header) - 1),
+    )
 
 
 def _named(rule_id: str, names: Mapping[str, str]) -> str:
@@ -966,20 +1087,27 @@ def _static_table(spec: Mapping[str, Any], caption: str, label: str) -> Table:
     )
 
 
-_TIER_FILLS = {"Green": "C6EFCE", "Amber": "FFEB9C", "Red": "F4B6B6"}
+_TIER_FILLS = {
+    "Green": "C6EFCE",
+    "Amber": "FFEB9C",
+    "Red": "F4B6B6",
+    "Black": "BFBFBF",  # grey: a black cell would hide its text
+}
 
 
-def _tier(share: float, threshold: float, ratio: float) -> str:
-    """Return the colour of a 0-to-1 score against the sell threshold.
+def _tier(share: float, cutoffs: Sequence[float]) -> str:
+    """Return the colour of a 0-to-1 score.
 
-    Green above ``threshold``; Amber from ``threshold * ratio`` up to and including
-    ``threshold``; Red strictly below ``threshold * ratio``, down to 0.
+    Green above ``cutoffs[0]``; Amber above ``cutoffs[1]`` up to and including
+    ``cutoffs[0]``; Red above ``cutoffs[2]`` up to and including ``cutoffs[1]``;
+    Black at or below ``cutoffs[2]``, down to 0.
     """
-    if share < threshold * ratio:
-        return "Red"
-    if share <= threshold:
+    green, amber, red = cutoffs
+    if share > green:
+        return "Green"
+    if share > amber:
         return "Amber"
-    return "Green"
+    return "Red" if share > red else "Black"
 
 
 def _worst_table(inputs: ReportInputs) -> Table:
@@ -990,7 +1118,7 @@ def _worst_table(inputs: ReportInputs) -> Table:
             str(r["gics_sector"]),
             f"{float(r['score']):.1f}",
             f"{float(r['score_share']):.2f}",
-            _tier(float(r["score_share"]), inputs.threshold, inputs.tier_ratio),
+            _tier(float(r["score_share"]), inputs.tier_cutoffs),
         ]
         for r in inputs.worst.to_dict("records")
     ]

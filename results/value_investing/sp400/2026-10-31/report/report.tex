@@ -288,10 +288,16 @@ Hims \& Hers Health (HIMS) & Health Care & 3.4 & 0.24 & \cellcolor[HTML]{FFEB9C}
 \hline
 \end{tabular}
 \end{table}
-These are the 10 lowest scores, as many as the picks, among the companies of the S\&P MidCap 400 that are scored on 18 September 2026, whether or not anyone holds them: Chewy (CHWY), Avis Budget Group (CAR), DigitalOcean (DOCN), Talen Energy (TLN), Okta, Inc. (OKTA), Docusign (DOCU), SiriusXM (SIRI), UGI Corp (UGI), Guidewire Software (GWRE) and Hims \& Hers Health (HIMS) (Table \ref{tab:worst}). Financials, Real Estate and companies with too few rules to score are not scored and so cannot appear. Companies with the same score are ordered by symbol, so when several share the last place, the alphabetically first are shown. The list shows where the score ranks these companies today; it is not a recommendation to buy, sell or sell short anything. A score of 0 means only that no rule awarded the company any points; it says nothing about what the company is worth.
+These are the 10 lowest scores, as many as the picks, among the companies of the S\&P MidCap 400 that are scored on 18 September 2026, whether or not anyone holds them: Chewy (CHWY), Avis Budget Group (CAR), DigitalOcean (DOCN), Talen Energy (TLN), Okta, Inc. (OKTA), Docusign (DOCU), SiriusXM (SIRI), UGI Corp (UGI), Guidewire Software (GWRE) and Hims \& Hers Health (HIMS) (Table \ref{tab:worst}, prices in Figure \ref{fig:worst-prices}). Financials, Real Estate and companies with too few rules to score are not scored and so cannot appear. Companies with the same score are ordered by symbol, so when several share the last place, the alphabetically first are shown. The list shows where the score ranks these companies today; it is not a recommendation to buy, sell or sell short anything. A score of 0 means only that no rule awarded the company any points; it says nothing about what the company is worth.
 
 The last column colours each score on the 0-to-1 scale against the sell threshold of 0.4. Green is a score above 0.4. Amber is a score from 0.2 up to and including 0.4: a company one would not buy, and would hold only if already owned. Red is a score below 0.2: a company one might start to think about selling. The colours are not the rule of the wallet with sells. That rule is mechanical: at or below 0.4 it sells part of a holding, the more the lower the score, and at 0 all of it, whatever the colour. The sell signal on these companies has not been tested: no test has measured what the lowest scores did afterwards. The cut-offs are those the score uses today and are not fixed. The wallet never sells short; a short position on these companies is a later step and has not been tested.
 
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\textwidth]{worst_prices.png}
+\caption{Share price of each of the 10 lowest scores (USD, split-adjusted, dividends excluded) over the last 5 years: earlier purchases of the investor who started in 2023 in green, earlier sales in red, the potential sale at the latest price in orange.}
+\label{fig:worst-prices}
+\end{figure}
 \section{How the model was tested}
 \label{sec:testing}
 \begin{table}[H]
@@ -302,7 +308,7 @@ The last column colours each score on the 0-to-1 scale against the sell threshol
 \hline
 Test & What is checked & Result & Status \\
 \hline
-Winners removed & The wallet still beats its index with the 3 largest winners removed & S\&P 500: yes, by 1.9 to 3.7 points (2016 to 2023 starts). S\&P 400: no. S\&P 600: mixed & S\&P 500 passed in-sample; others not \\
+Winners removed & The wallet still beats its index with the 3 largest winners removed & Computed with each report: Table \ref{tab:winners} & Read from the table; in-sample \\
 Company samples & Repeated samples, each leaving out a random part of the companies & S\&P 500: ahead of the index in every sample (the samples share most of their companies) & Passed on the S\&P 500, in-sample \\
 Unseen companies & The score frozen, then run once on a part of the companies never used & Positive, but two companies gave 99\% of the gain (earlier sixteen-rule score) & To rerun \\
 Other indices & The score beats random picks of its own index on the S\&P 400 and 600 & Not reproduced & Open \\
@@ -315,9 +321,27 @@ Real-world check & Results compared with market events and institutional logic &
 \end{table}
 This is a prototype, "first light": the first version of the model that is frozen and dated, with nothing earlier to compare it with. The figures below are in-sample stress and sampling diagnostics, compared with the index and not with random books of the same size, on a configuration that was chosen on this data after more than 100 designs were tried. The bands cover the sampling of companies only: they do not allow for the number of designs tried (multiple testing) or for the period, which the designs were chosen while looking at, so no result here is out of sample. The one held-out test, on companies the score never used, is on the earlier sixteen-rule score and is marked to rerun. The tests follow a written protocol, and a test that failed is shown as failed. The model has not cleared them: the tests below are open or failed in part. The numbers are from runs on 1 November 2026 on the ten default rules, with data as of 31 October 2026.
 
-On the S\&P 500 the picks beat the index in every one of a set of repeated samples that each left out a random part of the companies (the samples share most of their companies, so this is not independent confirmation), by 9 to 15 points a year on average depending on the start year, and by about 5 points in the worst sample. The investor who started in 2020 earns 27.7\% a year against 15.9\% in the index. The gain is concentrated: Micron makes up 24\% and Lam Research 16\% of the 2016 investor's gain. They still beat it with the three largest winners removed as if they had never existed (Applied Materials, Lam Research and Micron): by 3.7, 1.9 and 2.1 points a year for the investors who started in 2016, 2020 and 2023, and by 8.9 for 2025. With five removed (adding Nucor and Nvidia) the margin shrinks to 0.3 to 2.3 points for the first three. The edge is present in this sample of the index but thin, and concentrated in chip and materials companies that did well in a long bull market after 2009.
+On the S\&P 500 the picks beat the index in every one of a set of repeated samples that each left out a random part of the companies (the samples share most of their companies, so this is not independent confirmation), by 9 to 15 points a year on average depending on the start year, and by about 5 points in the worst sample. The investor who started in 2020 earns 27.7\% a year against 15.9\% in the index. The gain is concentrated: Micron makes up 24\% and Lam Research 16\% of the 2016 investor's gain. Table \ref{tab:winners}, computed with this report, runs the wallet again with the largest winners removed as if they had never existed. The edge is present in this sample of the index but shrinks as they are removed, and it is concentrated in chip and materials companies that did well in a long bull market after 2009.
 
-The other two indices do not confirm it. On the S\&P 400 the picks beat their fund by 2 to 5 points a year for the 2016 to 2023 starts, and with the three largest winners removed the margin is gone (0.4, -0.4 and -0.1). On the S\&P 600 the investors who started in 2016 and 2020 are ahead by about 6 points, which survives the removal of the three largest winners, while those who started in 2023 and 2025 trail the fund. The lists of the S\&P 400 and 600 give no entry dates and lose the companies that grew into a larger index, so these two tests are biased and not yet a verdict on the rules. Companies that left the index are missing from every test, which flatters the results.
+The other two indices do not confirm it as strongly: their own reports carry the same table, and it is the one to read for them. The lists of the S\&P 400 and 600 give no entry dates and lose the companies that grew into a larger index, so these two tests are biased and not yet a verdict on the rules. Companies that left the index are missing from every test, which flatters the results.
+
+\subsection{Without the biggest winners}
+\begin{table}[H]
+\centering
+\small
+\caption{Money-weighted return a year of the wallet above the S\&P MidCap 400, in percentage points, by start year, as it is and with the largest winners removed from the ranking (computed with this report).}\label{tab:winners}
+\begin{tabular}{l r r r r}
+\hline
+Start & As it is & Without 1 & Without 3 & Without 5 \\
+\hline
+2016 & +1.8 & +1.2 & +0.2 & -0.6 \\
+2020 & +3.1 & +1.4 & +0.9 & -0.5 \\
+2023 & +4.6 & +3.8 & +3.3 & +0.3 \\
+2025 & +20.9 & +18.9 & +19.4 & +16.0 \\
+\hline
+\end{tabular}
+\end{table}
+A few companies carry much of any wallet's gain, and the next quarter may offer fewer. To see how the result would stand without them, the wallet was run again with the largest winners removed as if they had never been in the index: the companies that put the most dollars ahead of the S\&P MidCap 400 over all purchases. In order, the largest first, they are Reliance, Inc. (RS), ITT Inc. (ITT), Commercial Metals (CMC), Avnet (AVT) and TD Synnex (SNX); each column removes the first of them that its heading counts. The picks are ranked again without them, so the next-best companies fill the book on the same dates with the same money (Table \ref{tab:winners}). The scores of the remaining companies are not recomputed, and the winners were found with hindsight, so the table shows how dependent the result is on them, not what would have been picked. A column close to the first one means the gain does not rest on those companies; a column far below it means it does.
 
 \section{Midas and the Investor}
 \label{sec:dialogue}
@@ -345,7 +369,7 @@ Every result in this report was questioned before it was believed. When somethin
 
 \textbf{The Investor:} (1987) "When shortages exist, however, even commodity businesses flourish", and "whenever shortages appear, the typical manager simply can't wait to expand capacity". (1989) "Time is the friend of the wonderful business, the enemy of the mediocre."
 
-\textbf{Midas:} The 1987 passage is about insurance; I apply it to chip makers by analogy. With the three largest winners removed (Applied Materials, Lam Research and Micron) the wallet still beat the index by 3.7, 1.9 and 2.1 points a year for the investors who started in 2016, 2020 and 2023; with five removed, by 0.3 to 2.3 points. The edge is present in this sample of the S\&P 500 but thin, and it sits in chip and materials companies after 2009. On the S\&P 400 it disappears without its three largest winners. Treat it with care.
+\textbf{Midas:} The 1987 passage is about insurance; I apply it to chip makers by analogy. Table \ref{tab:winners} holds the result, computed with this report: the wallet still beats the index without its largest winners, but by much less. The edge is present in this sample but thin, and it sits in chip and materials companies after 2009. Treat it with care.
 
 \textbf{What the tests showed.} The results are for holding over years, not months: the picks are bought twice a year and not sold. The concentration is the main risk, and one or two big winners carry much of the gain, so they are treated as luck until tested the same way. The book holds ten companies, not five: ten was chosen for plausibility and diversification, although the five-company book scored higher in the tests. The tests cover the default ten rules; other switches were not tested as a set. This is what the tests showed, not advice; read the tests in Section \ref{sec:testing} before relying on a number.
 
@@ -528,6 +552,317 @@ Year & Company & Sector & Weight & In & Bought at & Now & Sold & Kept & Return \
 2026-07 & FLR & Industrials & 9\% & 11 & 50.35 & 46.86 &  & 10 & -7\% \\
 \hline
 \end{longtable}}
+\section{Every company ranked}
+\label{app:ranking}
+{\small
+\begin{longtable}{r p{4.6cm} p{3cm} r r l}
+\caption{All 298 companies of the S\&P MidCap 400 scored on 18 September 2026, from the highest score to the lowest: sector, score, score on the 0-to-1 scale and colour (Green, Amber or Red; not a recommendation).}\label{tab:ranking}\\
+\hline
+Rank & Company & Sector & Score & Score 0 to 1 & Colour \\
+\hline
+\endhead
+1 & UFP Industries (UFPI) & Industrials & 29.3 & 0.85 & \cellcolor[HTML]{C6EFCE}Green \\
+2 & Harley-Davidson (HOG) & Consumer Discretionary & 27.0 & 0.78 & \cellcolor[HTML]{C6EFCE}Green \\
+3 & Ingredion (INGR) & Consumer Staples & 26.7 & 0.77 & \cellcolor[HTML]{C6EFCE}Green \\
+4 & Simpson Manufacturing (SSD) & Industrials & 26.3 & 0.76 & \cellcolor[HTML]{C6EFCE}Green \\
+5 & NOV Inc. (NOV) & Energy & 25.3 & 0.73 & \cellcolor[HTML]{C6EFCE}Green \\
+6 & Fluor (FLR) & Industrials & 24.6 & 0.78 & \cellcolor[HTML]{C6EFCE}Green \\
+7 & Commercial Metals (CMC) & Materials & 24.1 & 0.70 & \cellcolor[HTML]{C6EFCE}Green \\
+8 & Avnet (AVT) & Information Technology & 24.0 & 0.69 & \cellcolor[HTML]{C6EFCE}Green \\
+9 & Visteon (VC) & Consumer Discretionary & 23.1 & 0.76 & \cellcolor[HTML]{C6EFCE}Green \\
+10 & InterDigital (IDCC) & Information Technology & 23.0 & 0.66 & \cellcolor[HTML]{C6EFCE}Green \\
+11 & Reliance, Inc. (RS) & Materials & 23.0 & 0.66 & \cellcolor[HTML]{C6EFCE}Green \\
+12 & Genpact (G) & Industrials & 22.9 & 0.66 & \cellcolor[HTML]{C6EFCE}Green \\
+13 & Molina Healthcare (MOH) & Health Care & 22.8 & 0.66 & \cellcolor[HTML]{C6EFCE}Green \\
+14 & Cabot Corp (CBT) & Materials & 22.6 & 0.65 & \cellcolor[HTML]{C6EFCE}Green \\
+15 & ITT Inc. (ITT) & Industrials & 22.5 & 0.65 & \cellcolor[HTML]{C6EFCE}Green \\
+16 & EnerSys (ENS) & Industrials & 22.5 & 0.65 & \cellcolor[HTML]{C6EFCE}Green \\
+17 & Arrow Electronics (ARW) & Information Technology & 22.4 & 0.65 & \cellcolor[HTML]{C6EFCE}Green \\
+18 & NewMarket Corporation (NEU) & Materials & 22.3 & 0.64 & \cellcolor[HTML]{C6EFCE}Green \\
+19 & Gap Inc. (GAP) & Consumer Discretionary & 22.3 & 0.64 & \cellcolor[HTML]{C6EFCE}Green \\
+20 & Weatherford International (WFRD) & Energy & 22.0 & 0.63 & \cellcolor[HTML]{C6EFCE}Green \\
+21 & Watsco (WSO) & Industrials & 22.0 & 0.86 & \cellcolor[HTML]{C6EFCE}Green \\
+22 & Applied Industrial Technologies (AIT) & Industrials & 21.8 & 0.63 & \cellcolor[HTML]{C6EFCE}Green \\
+23 & Allison Transmission (ALSN) & Industrials & 21.4 & 0.62 & \cellcolor[HTML]{C6EFCE}Green \\
+24 & Eagle Materials (EXP) & Materials & 21.1 & 0.61 & \cellcolor[HTML]{C6EFCE}Green \\
+25 & Terex (TEX) & Industrials & 21.0 & 0.61 & \cellcolor[HTML]{C6EFCE}Green \\
+26 & The Marzetti Company (MZTI) & Consumer Staples & 21.0 & 0.61 & \cellcolor[HTML]{C6EFCE}Green \\
+27 & Yeti Holdings (YETI) & Consumer Discretionary & 21.0 & 0.61 & \cellcolor[HTML]{C6EFCE}Green \\
+28 & GameStop (GME) & Consumer Discretionary & 20.8 & 0.60 & \cellcolor[HTML]{C6EFCE}Green \\
+29 & Crane (CR) & Industrials & 20.7 & 0.65 & \cellcolor[HTML]{C6EFCE}Green \\
+30 & Carlisle Companies (CSL) & Industrials & 20.0 & 0.58 & \cellcolor[HTML]{C6EFCE}Green \\
+31 & EXL Service (EXLS) & Industrials & 19.9 & 0.58 & \cellcolor[HTML]{C6EFCE}Green \\
+32 & Thor Industries (THO) & Consumer Discretionary & 19.9 & 0.57 & \cellcolor[HTML]{C6EFCE}Green \\
+33 & Donaldson Company (DCI) & Industrials & 19.6 & 0.57 & \cellcolor[HTML]{C6EFCE}Green \\
+34 & Belden Inc. (BDC) & Information Technology & 19.6 & 0.57 & \cellcolor[HTML]{C6EFCE}Green \\
+35 & Louisiana-Pacific (LPX) & Industrials & 19.6 & 0.57 & \cellcolor[HTML]{C6EFCE}Green \\
+36 & Universal Display (OLED) & Information Technology & 19.5 & 0.83 & \cellcolor[HTML]{C6EFCE}Green \\
+37 & Axalta (AXTA) & Materials & 19.5 & 0.56 & \cellcolor[HTML]{C6EFCE}Green \\
+38 & MSC Industrial Direct (MSM) & Industrials & 19.5 & 0.56 & \cellcolor[HTML]{C6EFCE}Green \\
+39 & Ollie's Bargain Outlet (OLLI) & Consumer Discretionary & 19.3 & 0.56 & \cellcolor[HTML]{C6EFCE}Green \\
+40 & Gentex (GNTX) & Consumer Discretionary & 19.2 & 0.82 & \cellcolor[HTML]{C6EFCE}Green \\
+41 & Watts Water Technologies (WTS) & Industrials & 19.1 & 0.75 & \cellcolor[HTML]{C6EFCE}Green \\
+42 & Pilgrim's Pride (PPC) & Consumer Staples & 19.1 & 0.55 & \cellcolor[HTML]{C6EFCE}Green \\
+43 & Mattel (MAT) & Consumer Discretionary & 19.1 & 0.55 & \cellcolor[HTML]{C6EFCE}Green \\
+44 & Lear (LEA) & Consumer Discretionary & 19.0 & 0.55 & \cellcolor[HTML]{C6EFCE}Green \\
+45 & Booz Allen Hamilton (BAH) & Industrials & 18.9 & 0.55 & \cellcolor[HTML]{C6EFCE}Green \\
+46 & Cirrus Logic (CRUS) & Information Technology & 18.8 & 0.80 & \cellcolor[HTML]{C6EFCE}Green \\
+47 & Columbia Sportswear (COLM) & Consumer Discretionary & 18.8 & 0.80 & \cellcolor[HTML]{C6EFCE}Green \\
+48 & Valaris (VAL) & Energy & 18.7 & 0.59 & \cellcolor[HTML]{C6EFCE}Green \\
+49 & Sanmina Corporation (SANM) & Information Technology & 18.6 & 0.54 & \cellcolor[HTML]{C6EFCE}Green \\
+50 & Antero Midstream (AM) & Energy & 18.4 & 0.53 & \cellcolor[HTML]{C6EFCE}Green \\
+51 & Landstar System (LSTR) & Industrials & 18.4 & 0.53 & \cellcolor[HTML]{C6EFCE}Green \\
+52 & RPM International (RPM) & Materials & 18.3 & 0.53 & \cellcolor[HTML]{C6EFCE}Green \\
+53 & Advanced Drainage Systems (WMS) & Industrials & 18.2 & 0.52 & \cellcolor[HTML]{C6EFCE}Green \\
+54 & Paylocity (PCTY) & Industrials & 18.2 & 0.52 & \cellcolor[HTML]{C6EFCE}Green \\
+55 & MSA Safety (MSA) & Industrials & 18.1 & 0.52 & \cellcolor[HTML]{C6EFCE}Green \\
+56 & Nextpower (NXT) & Industrials & 18.1 & 0.81 & \cellcolor[HTML]{C6EFCE}Green \\
+57 & Fortune Brands Innovations (FBIN) & Industrials & 18.0 & 0.52 & \cellcolor[HTML]{C6EFCE}Green \\
+58 & PVH Corp. (PVH) & Consumer Discretionary & 17.8 & 0.51 & \cellcolor[HTML]{C6EFCE}Green \\
+59 & Tenet Health (THC) & Health Care & 17.8 & 0.51 & \cellcolor[HTML]{C6EFCE}Green \\
+60 & Timken (TKR) & Industrials & 17.8 & 0.51 & \cellcolor[HTML]{C6EFCE}Green \\
+61 & Dycom Industries (DY) & Industrials & 17.7 & 0.51 & \cellcolor[HTML]{C6EFCE}Green \\
+62 & Valmont Industries (VMI) & Industrials & 17.7 & 0.51 & \cellcolor[HTML]{C6EFCE}Green \\
+63 & IES Holdings (IESC) & Industrials & 17.7 & 0.51 & \cellcolor[HTML]{C6EFCE}Green \\
+64 & Option Care Health (OPCH) & Health Care & 17.7 & 0.51 & \cellcolor[HTML]{C6EFCE}Green \\
+65 & FTI Consulting (FCN) & Industrials & 17.6 & 0.51 & \cellcolor[HTML]{C6EFCE}Green \\
+66 & United Therapeutics (UTHR) & Health Care & 17.6 & 0.75 & \cellcolor[HTML]{C6EFCE}Green \\
+67 & Ensign Group (ENSG) & Health Care & 17.5 & 0.51 & \cellcolor[HTML]{C6EFCE}Green \\
+68 & Amkor Technology (AMKR) & Information Technology & 17.5 & 0.50 & \cellcolor[HTML]{C6EFCE}Green \\
+69 & Lincoln Electric (LECO) & Industrials & 17.4 & 0.50 & \cellcolor[HTML]{C6EFCE}Green \\
+70 & Acuity Brands (AYI) & Industrials & 17.4 & 0.50 & \cellcolor[HTML]{C6EFCE}Green \\
+71 & Parsons Corporation (PSN) & Industrials & 17.3 & 0.50 & \cellcolor[HTML]{C6EFCE}Green \\
+72 & Novanta (NOVT) & Information Technology & 17.3 & 0.50 & \cellcolor[HTML]{C6EFCE}Green \\
+73 & Kratos Defense \& Security Solutions (KTOS) & Industrials & 17.2 & 0.50 & \cellcolor[HTML]{C6EFCE}Green \\
+74 & Carpenter Technology (CRS) & Industrials & 17.2 & 0.50 & \cellcolor[HTML]{C6EFCE}Green \\
+75 & Maximus Inc. (MMS) & Industrials & 17.1 & 0.49 & \cellcolor[HTML]{C6EFCE}Green \\
+76 & Graham Holdings (GHC) & Consumer Discretionary & 17.1 & 0.67 & \cellcolor[HTML]{C6EFCE}Green \\
+77 & Toro (TTC) & Industrials & 17.0 & 0.49 & \cellcolor[HTML]{C6EFCE}Green \\
+78 & Mueller Industries (MLI) & Industrials & 17.0 & 0.73 & \cellcolor[HTML]{C6EFCE}Green \\
+79 & Sonoco (SON) & Materials & 17.0 & 0.49 & \cellcolor[HTML]{C6EFCE}Green \\
+80 & WESCO International (WCC) & Industrials & 17.0 & 0.49 & \cellcolor[HTML]{C6EFCE}Green \\
+81 & Lantheus Holdings (LNTH) & Health Care & 16.9 & 0.49 & \cellcolor[HTML]{C6EFCE}Green \\
+82 & Boyd Gaming (BYD) & Consumer Discretionary & 16.8 & 0.49 & \cellcolor[HTML]{C6EFCE}Green \\
+83 & Macy's (M) & Consumer Discretionary & 16.7 & 0.48 & \cellcolor[HTML]{C6EFCE}Green \\
+84 & Woodward, Inc. (WWD) & Industrials & 16.6 & 0.48 & \cellcolor[HTML]{C6EFCE}Green \\
+85 & Graphic Packaging (GPK) & Materials & 16.4 & 0.47 & \cellcolor[HTML]{C6EFCE}Green \\
+86 & Crane NXT (CXT) & Information Technology & 16.1 & 0.46 & \cellcolor[HTML]{C6EFCE}Green \\
+87 & Core \& Main (CNM) & Industrials & 16.0 & 0.72 & \cellcolor[HTML]{C6EFCE}Green \\
+88 & Autoliv (ALV) & Consumer Discretionary & 16.0 & 0.46 & \cellcolor[HTML]{C6EFCE}Green \\
+89 & Saia (SAIA) & Industrials & 15.9 & 0.46 & \cellcolor[HTML]{C6EFCE}Green \\
+90 & Flowserve (FLS) & Industrials & 15.9 & 0.46 & \cellcolor[HTML]{C6EFCE}Green \\
+91 & AGCO (AGCO) & Industrials & 15.9 & 0.46 & \cellcolor[HTML]{C6EFCE}Green \\
+92 & FormFactor, Inc. (FORM) & Information Technology & 15.8 & 0.46 & \cellcolor[HTML]{C6EFCE}Green \\
+93 & SharkNinja (SN) & Consumer Discretionary & 15.8 & 0.50 & \cellcolor[HTML]{C6EFCE}Green \\
+94 & ESAB (ESAB) & Industrials & 15.8 & 0.45 & \cellcolor[HTML]{C6EFCE}Green \\
+95 & Matador Resources (MTDR) & Energy & 15.4 & 0.44 & \cellcolor[HTML]{C6EFCE}Green \\
+96 & HF Sinclair (DINO) & Energy & 15.4 & 0.44 & \cellcolor[HTML]{C6EFCE}Green \\
+97 & Penske Automotive Group (PAG) & Consumer Discretionary & 15.2 & 0.44 & \cellcolor[HTML]{C6EFCE}Green \\
+98 & Doximity (DOCS) & Health Care & 15.1 & 0.64 & \cellcolor[HTML]{C6EFCE}Green \\
+99 & AptarGroup (ATR) & Materials & 15.0 & 0.43 & \cellcolor[HTML]{C6EFCE}Green \\
+100 & Graco Inc. (GGG) & Industrials & 15.0 & 0.64 & \cellcolor[HTML]{C6EFCE}Green \\
+101 & Crown Holdings (CCK) & Materials & 14.9 & 0.43 & \cellcolor[HTML]{C6EFCE}Green \\
+102 & AeroVironment (AVAV) & Industrials & 14.8 & 0.43 & \cellcolor[HTML]{C6EFCE}Green \\
+103 & MP Materials (MP) & Materials & 14.8 & 0.43 & \cellcolor[HTML]{C6EFCE}Green \\
+104 & Vontier (VNT) & Information Technology & 14.7 & 0.42 & \cellcolor[HTML]{C6EFCE}Green \\
+105 & Science Applications Intl Corp (SAIC) & Industrials & 14.7 & 0.42 & \cellcolor[HTML]{C6EFCE}Green \\
+106 & AECOM (ACM) & Industrials & 14.6 & 0.42 & \cellcolor[HTML]{C6EFCE}Green \\
+107 & Globus Medical (GMED) & Health Care & 14.5 & 0.62 & \cellcolor[HTML]{C6EFCE}Green \\
+108 & Curtiss-Wright (CW) & Industrials & 14.5 & 0.42 & \cellcolor[HTML]{C6EFCE}Green \\
+109 & Floor \& Decor (FND) & Consumer Discretionary & 14.4 & 0.41 & \cellcolor[HTML]{C6EFCE}Green \\
+110 & Wingstop (WING) & Consumer Discretionary & 14.3 & 0.41 & \cellcolor[HTML]{C6EFCE}Green \\
+111 & BioMarin Pharmaceutical (BMRN) & Health Care & 14.3 & 0.61 & \cellcolor[HTML]{C6EFCE}Green \\
+112 & Corteva (CTVA) & Materials & 14.3 & 0.41 & \cellcolor[HTML]{C6EFCE}Green \\
+113 & Nexstar Media Group (NXST) & Communication Services & 14.3 & 0.41 & \cellcolor[HTML]{C6EFCE}Green \\
+114 & Oshkosh (OSK) & Industrials & 14.3 & 0.61 & \cellcolor[HTML]{C6EFCE}Green \\
+115 & BWX Technologies (BWXT) & Industrials & 14.3 & 0.41 & \cellcolor[HTML]{C6EFCE}Green \\
+116 & MACOM Technology Solutions (MTSI) & Information Technology & 14.2 & 0.41 & \cellcolor[HTML]{C6EFCE}Green \\
+117 & TD Synnex (SNX) & Information Technology & 14.2 & 0.41 & \cellcolor[HTML]{C6EFCE}Green \\
+118 & AutoNation (AN) & Consumer Discretionary & 14.1 & 0.41 & \cellcolor[HTML]{C6EFCE}Green \\
+119 & BorgWarner (BWA) & Consumer Discretionary & 14.1 & 0.41 & \cellcolor[HTML]{C6EFCE}Green \\
+120 & Bill Holdings (BILL) & Information Technology & 13.9 & 0.40 & \cellcolor[HTML]{C6EFCE}Green \\
+121 & Valvoline (VVV) & Consumer Discretionary & 13.7 & 0.39 & \cellcolor[HTML]{FFEB9C}Amber \\
+122 & Halozyme (HALO) & Health Care & 13.6 & 0.39 & \cellcolor[HTML]{FFEB9C}Amber \\
+123 & e.l.f. Beauty (ELF) & Consumer Staples & 13.5 & 0.39 & \cellcolor[HTML]{FFEB9C}Amber \\
+124 & Range Resources (RRC) & Energy & 13.5 & 0.39 & \cellcolor[HTML]{FFEB9C}Amber \\
+125 & Solstice Advanced Materials (SOLS) & Materials & 13.4 & 0.42 & \cellcolor[HTML]{C6EFCE}Green \\
+126 & nVent Electric plc (NVT) & Industrials & 13.3 & 0.38 & \cellcolor[HTML]{FFEB9C}Amber \\
+127 & Cytokinetics (CYTK) & Health Care & 13.2 & 0.38 & \cellcolor[HTML]{FFEB9C}Amber \\
+128 & Crocs (CROX) & Consumer Discretionary & 13.2 & 0.38 & \cellcolor[HTML]{FFEB9C}Amber \\
+129 & Clean Harbors (CLH) & Industrials & 13.2 & 0.38 & \cellcolor[HTML]{FFEB9C}Amber \\
+130 & Chord Energy (CHRD) & Energy & 13.1 & 0.42 & \cellcolor[HTML]{C6EFCE}Green \\
+131 & SPX Technologies (SPXC) & Industrials & 13.1 & 0.38 & \cellcolor[HTML]{FFEB9C}Amber \\
+132 & Grand Canyon Education (LOPE) & Consumer Discretionary & 13.1 & 0.56 & \cellcolor[HTML]{C6EFCE}Green \\
+133 & Brink's (BCO) & Industrials & 12.9 & 0.37 & \cellcolor[HTML]{FFEB9C}Amber \\
+134 & Lithia Motors (LAD) & Consumer Discretionary & 12.9 & 0.37 & \cellcolor[HTML]{FFEB9C}Amber \\
+135 & Exelixis (EXEL) & Health Care & 12.8 & 0.55 & \cellcolor[HTML]{C6EFCE}Green \\
+136 & Repligen (RGEN) & Health Care & 12.8 & 0.37 & \cellcolor[HTML]{FFEB9C}Amber \\
+137 & Middleby (MIDD) & Industrials & 12.8 & 0.37 & \cellcolor[HTML]{FFEB9C}Amber \\
+138 & ATI Inc. (ATI) & Industrials & 12.8 & 0.40 & \cellcolor[HTML]{C6EFCE}Green \\
+139 & Albertsons (ACI) & Consumer Staples & 12.7 & 0.37 & \cellcolor[HTML]{FFEB9C}Amber \\
+140 & Black Hills Corporation (BKH) & Utilities & 12.7 & 0.37 & \cellcolor[HTML]{FFEB9C}Amber \\
+141 & Portland General Electric (POR) & Utilities & 12.7 & 0.37 & \cellcolor[HTML]{FFEB9C}Amber \\
+142 & Moog Inc. (MOG-A) & Industrials & 12.7 & 0.60 & \cellcolor[HTML]{C6EFCE}Green \\
+143 & Roivant Sciences (ROIV) & Health Care & 12.7 & 0.62 & \cellcolor[HTML]{C6EFCE}Green \\
+144 & Neurocrine Biosciences (NBIX) & Health Care & 12.7 & 0.54 & \cellcolor[HTML]{C6EFCE}Green \\
+145 & Burlington Stores (BURL) & Consumer Discretionary & 12.5 & 0.36 & \cellcolor[HTML]{FFEB9C}Amber \\
+146 & Silgan Holdings (SLGN) & Materials & 12.5 & 0.36 & \cellcolor[HTML]{FFEB9C}Amber \\
+147 & KBR, Inc. (KBR) & Industrials & 12.4 & 0.36 & \cellcolor[HTML]{FFEB9C}Amber \\
+148 & Haemonetics (HAE) & Health Care & 12.3 & 0.36 & \cellcolor[HTML]{FFEB9C}Amber \\
+149 & National Fuel Gas (NFG) & Utilities & 12.3 & 0.36 & \cellcolor[HTML]{FFEB9C}Amber \\
+150 & RBC Bearings (RBC) & Industrials & 12.3 & 0.36 & \cellcolor[HTML]{FFEB9C}Amber \\
+151 & Celsius Holdings (CELH) & Consumer Staples & 12.2 & 0.35 & \cellcolor[HTML]{FFEB9C}Amber \\
+152 & Whirlpool Corporation (WHR) & Consumer Discretionary & 12.2 & 0.35 & \cellcolor[HTML]{FFEB9C}Amber \\
+153 & Southwest Gas Corp (SWX) & Utilities & 12.0 & 0.39 & \cellcolor[HTML]{FFEB9C}Amber \\
+154 & Post Holdings (POST) & Consumer Staples & 11.9 & 0.34 & \cellcolor[HTML]{FFEB9C}Amber \\
+155 & Alcoa (AA) & Materials & 11.8 & 0.34 & \cellcolor[HTML]{FFEB9C}Amber \\
+156 & Allegro MicroSystems (ALGM) & Information Technology & 11.8 & 0.34 & \cellcolor[HTML]{FFEB9C}Amber \\
+157 & Bio-Rad Laboratories (BIO) & Health Care & 11.8 & 0.47 & \cellcolor[HTML]{C6EFCE}Green \\
+158 & Ovintiv (OVV) & Energy & 11.7 & 0.34 & \cellcolor[HTML]{FFEB9C}Amber \\
+159 & Littelfuse (LFUS) & Information Technology & 11.7 & 0.34 & \cellcolor[HTML]{FFEB9C}Amber \\
+160 & One Gas (OGS) & Utilities & 11.7 & 0.34 & \cellcolor[HTML]{FFEB9C}Amber \\
+161 & Spire (SR) & Utilities & 11.7 & 0.34 & \cellcolor[HTML]{FFEB9C}Amber \\
+162 & Wyndham Hotels \& Resorts (WH) & Consumer Discretionary & 11.6 & 0.34 & \cellcolor[HTML]{FFEB9C}Amber \\
+163 & Pinterest (PINS) & Communication Services & 11.6 & 0.82 & \cellcolor[HTML]{C6EFCE}Green \\
+164 & Encompass Health (EHC) & Health Care & 11.6 & 0.33 & \cellcolor[HTML]{FFEB9C}Amber \\
+165 & New Jersey Resources (NJR) & Utilities & 11.5 & 0.33 & \cellcolor[HTML]{FFEB9C}Amber \\
+166 & Essential Utilities (WTRG) & Utilities & 11.5 & 0.33 & \cellcolor[HTML]{FFEB9C}Amber \\
+167 & Vail Resorts (MTN) & Consumer Discretionary & 11.5 & 0.33 & \cellcolor[HTML]{FFEB9C}Amber \\
+168 & Fabrinet (FN) & Information Technology & 11.4 & 0.49 & \cellcolor[HTML]{C6EFCE}Green \\
+169 & H\&R Block (HRB) & Consumer Discretionary & 11.4 & 0.36 & \cellcolor[HTML]{FFEB9C}Amber \\
+170 & Avient (AVNT) & Materials & 11.4 & 0.33 & \cellcolor[HTML]{FFEB9C}Amber \\
+171 & Brunswick (BC) & Consumer Discretionary & 11.4 & 0.33 & \cellcolor[HTML]{FFEB9C}Amber \\
+172 & Abercrombie \& Fitch (ANF) & Consumer Discretionary & 11.2 & 0.48 & \cellcolor[HTML]{C6EFCE}Green \\
+173 & Viper Energy (VNOM) & Energy & 11.2 & 0.50 & \cellcolor[HTML]{C6EFCE}Green \\
+174 & IPG Photonics (IPGP) & Information Technology & 11.2 & 0.48 & \cellcolor[HTML]{C6EFCE}Green \\
+175 & Ryder (R) & Industrials & 11.0 & 0.32 & \cellcolor[HTML]{FFEB9C}Amber \\
+176 & Performance Food Group (PFGC) & Consumer Staples & 11.0 & 0.32 & \cellcolor[HTML]{FFEB9C}Amber \\
+177 & TechnipFMC (FTI) & Energy & 10.8 & 0.31 & \cellcolor[HTML]{FFEB9C}Amber \\
+178 & GATX (GATX) & Industrials & 10.8 & 0.61 & \cellcolor[HTML]{C6EFCE}Green \\
+179 & Tetra Tech (TTEK) & Industrials & 10.7 & 0.31 & \cellcolor[HTML]{FFEB9C}Amber \\
+180 & Service Corp Intl (SCI) & Consumer Discretionary & 10.7 & 0.31 & \cellcolor[HTML]{FFEB9C}Amber \\
+181 & Advanced Energy (AEIS) & Information Technology & 10.5 & 0.30 & \cellcolor[HTML]{FFEB9C}Amber \\
+182 & Murphy Oil (MUR) & Energy & 10.5 & 0.30 & \cellcolor[HTML]{FFEB9C}Amber \\
+183 & CNX Resources (CNX) & Energy & 10.4 & 0.30 & \cellcolor[HTML]{FFEB9C}Amber \\
+184 & Dolby (DLB) & Information Technology & 10.3 & 0.73 & \cellcolor[HTML]{C6EFCE}Green \\
+185 & Westlake Corporation (WLK) & Materials & 10.2 & 0.29 & \cellcolor[HTML]{FFEB9C}Amber \\
+186 & Choice Hotels (CHH) & Consumer Discretionary & 10.2 & 0.29 & \cellcolor[HTML]{FFEB9C}Amber \\
+187 & Murphy USA (MUSA) & Consumer Discretionary & 10.2 & 0.29 & \cellcolor[HTML]{FFEB9C}Amber \\
+188 & UL Solutions (ULS) & Industrials & 10.1 & 0.32 & \cellcolor[HTML]{FFEB9C}Amber \\
+189 & Travel + Leisure Co. (TNL) & Consumer Discretionary & 10.1 & 0.57 & \cellcolor[HTML]{C6EFCE}Green \\
+190 & Idacorp (IDA) & Utilities & 10.0 & 0.29 & \cellcolor[HTML]{FFEB9C}Amber \\
+191 & OGE Energy (OGE) & Utilities & 10.0 & 0.29 & \cellcolor[HTML]{FFEB9C}Amber \\
+192 & CACI International (CACI) & Industrials & 10.0 & 0.29 & \cellcolor[HTML]{FFEB9C}Amber \\
+193 & Rambus (RMBS) & Information Technology & 10.0 & 0.43 & \cellcolor[HTML]{C6EFCE}Green \\
+194 & Royal Gold (RGLD) & Materials & 10.0 & 0.32 & \cellcolor[HTML]{FFEB9C}Amber \\
+195 & Owens Corning (OC) & Industrials & 10.0 & 0.29 & \cellcolor[HTML]{FFEB9C}Amber \\
+196 & BJ's Wholesale Club (BJ) & Consumer Staples & 10.0 & 0.29 & \cellcolor[HTML]{FFEB9C}Amber \\
+197 & Sensata Technologies (ST) & Industrials & 9.7 & 0.28 & \cellcolor[HTML]{FFEB9C}Amber \\
+198 & Kirby Corporation (KEX) & Industrials & 9.7 & 0.28 & \cellcolor[HTML]{FFEB9C}Amber \\
+199 & Permian Resources (PR) & Energy & 9.7 & 0.28 & \cellcolor[HTML]{FFEB9C}Amber \\
+200 & Bruker (BRKR) & Health Care & 9.6 & 0.28 & \cellcolor[HTML]{FFEB9C}Amber \\
+201 & Onto Innovation (ONTO) & Information Technology & 9.5 & 0.41 & \cellcolor[HTML]{C6EFCE}Green \\
+202 & Hilton Grand Vacations (HGV) & Consumer Discretionary & 9.5 & 0.54 & \cellcolor[HTML]{C6EFCE}Green \\
+203 & Envista Holdings (NVST) & Health Care & 9.4 & 0.27 & \cellcolor[HTML]{FFEB9C}Amber \\
+204 & Semtech (SMTC) & Information Technology & 9.4 & 0.27 & \cellcolor[HTML]{FFEB9C}Amber \\
+205 & Dick's Sporting Goods (DKS) & Consumer Discretionary & 9.4 & 0.66 & \cellcolor[HTML]{C6EFCE}Green \\
+206 & Exponent, Inc. (EXPO) & Industrials & 9.3 & 0.40 & \cellcolor[HTML]{FFEB9C}Amber \\
+207 & Krystal Biotech (KRYS) & Health Care & 9.3 & 0.40 & \cellcolor[HTML]{FFEB9C}Amber \\
+208 & Ashland Global (ASH) & Materials & 9.3 & 0.27 & \cellcolor[HTML]{FFEB9C}Amber \\
+209 & Antero Resources (AR) & Energy & 9.3 & 0.27 & \cellcolor[HTML]{FFEB9C}Amber \\
+210 & StandardAero (SARO) & Industrials & 9.3 & 0.29 & \cellcolor[HTML]{FFEB9C}Amber \\
+211 & AAON (AAON) & Industrials & 9.3 & 0.40 & \cellcolor[HTML]{FFEB9C}Amber \\
+212 & TTM Technologies (TTMI) & Information Technology & 9.1 & 0.26 & \cellcolor[HTML]{FFEB9C}Amber \\
+213 & DT Midstream (DTM) & Energy & 8.9 & 0.26 & \cellcolor[HTML]{FFEB9C}Amber \\
+214 & PBF Energy (PBF) & Energy & 8.8 & 0.35 & \cellcolor[HTML]{FFEB9C}Amber \\
+215 & NorthWestern Energy (NWE) & Utilities & 8.8 & 0.28 & \cellcolor[HTML]{FFEB9C}Amber \\
+216 & VF Corporation (VFC) & Consumer Discretionary & 8.8 & 0.25 & \cellcolor[HTML]{FFEB9C}Amber \\
+217 & Bentley Systems (BSY) & Information Technology & 8.7 & 0.34 & \cellcolor[HTML]{FFEB9C}Amber \\
+218 & Bath \& Body Works, Inc. (BBWI) & Consumer Discretionary & 8.7 & 0.25 & \cellcolor[HTML]{FFEB9C}Amber \\
+219 & Entegris (ENTG) & Information Technology & 8.6 & 0.25 & \cellcolor[HTML]{FFEB9C}Amber \\
+220 & US Foods (USFD) & Consumer Staples & 8.6 & 0.25 & \cellcolor[HTML]{FFEB9C}Amber \\
+221 & Sterling Infrastructure (STRL) & Industrials & 8.6 & 0.25 & \cellcolor[HTML]{FFEB9C}Amber \\
+222 & HealthEquity (HQY) & Health Care & 8.4 & 0.24 & \cellcolor[HTML]{FFEB9C}Amber \\
+223 & Maplebear Inc. (CART) & Consumer Staples & 8.4 & 0.41 & \cellcolor[HTML]{C6EFCE}Green \\
+224 & AppFolio (APPF) & Information Technology & 8.3 & 0.59 & \cellcolor[HTML]{C6EFCE}Green \\
+225 & Silicon Labs (SLAB) & Information Technology & 8.3 & 0.36 & \cellcolor[HTML]{FFEB9C}Amber \\
+226 & Regal Rexnord (RRX) & Industrials & 8.2 & 0.24 & \cellcolor[HTML]{FFEB9C}Amber \\
+227 & Avantor (AVTR) & Health Care & 8.1 & 0.23 & \cellcolor[HTML]{FFEB9C}Amber \\
+228 & Sprouts Farmers Market (SFM) & Consumer Staples & 8.1 & 0.34 & \cellcolor[HTML]{FFEB9C}Amber \\
+229 & Darling Ingredients (DAR) & Consumer Staples & 8.0 & 0.23 & \cellcolor[HTML]{FFEB9C}Amber \\
+230 & Alaska Air Group (ALK) & Industrials & 8.0 & 0.23 & \cellcolor[HTML]{FFEB9C}Amber \\
+231 & Hexcel (HXL) & Industrials & 7.9 & 0.34 & \cellcolor[HTML]{FFEB9C}Amber \\
+232 & Jazz Pharmaceuticals (JAZZ) & Health Care & 7.9 & 0.23 & \cellcolor[HTML]{FFEB9C}Amber \\
+233 & Hecla Mining (HL) & Materials & 7.8 & 0.33 & \cellcolor[HTML]{FFEB9C}Amber \\
+234 & TXNM Energy (TXNM) & Utilities & 7.8 & 0.22 & \cellcolor[HTML]{FFEB9C}Amber \\
+235 & Vicor Corporation (VICR) & Industrials & 7.7 & 0.55 & \cellcolor[HTML]{C6EFCE}Green \\
+236 & Somnigroup International (SGI) & Consumer Discretionary & 7.7 & 0.22 & \cellcolor[HTML]{FFEB9C}Amber \\
+237 & Trex (TREX) & Industrials & 7.6 & 0.33 & \cellcolor[HTML]{FFEB9C}Amber \\
+238 & Qualys (QLYS) & Information Technology & 7.4 & 0.32 & \cellcolor[HTML]{FFEB9C}Amber \\
+239 & Roku, Inc. (ROKU) & Communication Services & 7.4 & 0.31 & \cellcolor[HTML]{FFEB9C}Amber \\
+240 & Penumbra, Inc. (PEN) & Health Care & 7.3 & 0.31 & \cellcolor[HTML]{FFEB9C}Amber \\
+241 & SiTime (SITM) & Information Technology & 7.3 & 0.31 & \cellcolor[HTML]{FFEB9C}Amber \\
+242 & Aramark (ARMK) & Consumer Discretionary & 7.3 & 0.23 & \cellcolor[HTML]{FFEB9C}Amber \\
+243 & Dynatrace (DT) & Information Technology & 7.1 & 0.30 & \cellcolor[HTML]{FFEB9C}Amber \\
+244 & Cleveland-Cliffs (CLF) & Materials & 7.0 & 0.20 & \cellcolor[HTML]{FFEB9C}Amber \\
+245 & Elanco (ELAN) & Health Care & 7.0 & 0.20 & \cellcolor[HTML]{FFEB9C}Amber \\
+246 & MKS Instruments (MKSI) & Information Technology & 7.0 & 0.20 & \cellcolor[HTML]{FFEB9C}Amber \\
+247 & New York Times Company (NYT) & Communication Services & 6.9 & 0.49 & \cellcolor[HTML]{C6EFCE}Green \\
+248 & Five Below (FIVE) & Consumer Discretionary & 6.8 & 0.29 & \cellcolor[HTML]{FFEB9C}Amber \\
+249 & Chemed Corp. (CHE) & Health Care & 6.8 & 0.29 & \cellcolor[HTML]{FFEB9C}Amber \\
+250 & Texas Roadhouse (TXRH) & Consumer Discretionary & 6.6 & 0.28 & \cellcolor[HTML]{FFEB9C}Amber \\
+251 & Sotera Health (SHC) & Health Care & 6.6 & 0.19 & \cellcolor[HTML]{F4B6B6}Red \\
+252 & LivaNova (LIVN) & Health Care & 6.5 & 0.19 & \cellcolor[HTML]{F4B6B6}Red \\
+253 & Dentsply Sirona (XRAY) & Health Care & 6.4 & 0.18 & \cellcolor[HTML]{F4B6B6}Red \\
+254 & TransUnion (TRU) & Industrials & 6.4 & 0.18 & \cellcolor[HTML]{F4B6B6}Red \\
+255 & Warner Music Group (WMG) & Communication Services & 6.3 & 0.35 & \cellcolor[HTML]{FFEB9C}Amber \\
+256 & RB Global (RBA) & Industrials & 6.2 & 0.18 & \cellcolor[HTML]{F4B6B6}Red \\
+257 & Cognex (CGNX) & Information Technology & 6.2 & 0.26 & \cellcolor[HTML]{FFEB9C}Amber \\
+258 & Dutch Bros Inc. (BROS) & Consumer Discretionary & 6.1 & 0.27 & \cellcolor[HTML]{FFEB9C}Amber \\
+259 & BrightSpring Health Services (BTSG) & Health Care & 6.1 & 0.19 & \cellcolor[HTML]{F4B6B6}Red \\
+260 & Ormat Technologies (ORA) & Utilities & 6.0 & 0.17 & \cellcolor[HTML]{F4B6B6}Red \\
+261 & Dropbox (DBX) & Information Technology & 5.9 & 0.42 & \cellcolor[HTML]{C6EFCE}Green \\
+262 & GXO Logistics (GXO) & Industrials & 5.8 & 0.17 & \cellcolor[HTML]{F4B6B6}Red \\
+263 & Pegasystems (PEGA) & Information Technology & 5.8 & 0.25 & \cellcolor[HTML]{FFEB9C}Amber \\
+264 & MasTec (MTZ) & Industrials & 5.7 & 0.16 & \cellcolor[HTML]{F4B6B6}Red \\
+265 & Polaris (PII) & Consumer Discretionary & 5.7 & 0.16 & \cellcolor[HTML]{F4B6B6}Red \\
+266 & Coeur Mining (CDE) & Materials & 5.6 & 0.24 & \cellcolor[HTML]{FFEB9C}Amber \\
+267 & Churchill Downs Inc. (CHDN) & Consumer Discretionary & 5.5 & 0.24 & \cellcolor[HTML]{FFEB9C}Amber \\
+268 & Arrowhead Pharmaceuticals (ARWR) & Health Care & 5.3 & 0.23 & \cellcolor[HTML]{FFEB9C}Amber \\
+269 & Duolingo (DUOL) & Consumer Discretionary & 5.2 & 0.37 & \cellcolor[HTML]{FFEB9C}Amber \\
+270 & Lattice Semiconductor (LSCC) & Information Technology & 5.0 & 0.21 & \cellcolor[HTML]{FFEB9C}Amber \\
+271 & Coca-Cola Consolidated (COKE) & Consumer Staples & 4.8 & 0.26 & \cellcolor[HTML]{FFEB9C}Amber \\
+272 & APi Group (APG) & Industrials & 4.6 & 0.13 & \cellcolor[HTML]{F4B6B6}Red \\
+273 & Kyndryl (KD) & Information Technology & 4.6 & 0.15 & \cellcolor[HTML]{F4B6B6}Red \\
+274 & American Airlines Group (AAL) & Industrials & 4.5 & 0.13 & \cellcolor[HTML]{F4B6B6}Red \\
+275 & XPO, Inc. (XPO) & Industrials & 4.5 & 0.13 & \cellcolor[HTML]{F4B6B6}Red \\
+276 & Cava Group (CAVA) & Consumer Discretionary & 4.4 & 0.21 & \cellcolor[HTML]{FFEB9C}Amber \\
+277 & UiPath (PATH) & Information Technology & 4.4 & 0.31 & \cellcolor[HTML]{FFEB9C}Amber \\
+278 & Medpace (MEDP) & Health Care & 4.3 & 0.18 & \cellcolor[HTML]{F4B6B6}Red \\
+279 & Knight-Swift (KNX) & Industrials & 4.3 & 0.12 & \cellcolor[HTML]{F4B6B6}Red \\
+280 & Planet Fitness (PLNT) & Consumer Discretionary & 4.2 & 0.23 & \cellcolor[HTML]{FFEB9C}Amber \\
+281 & CommVault Systems (CVLT) & Information Technology & 4.2 & 0.18 & \cellcolor[HTML]{F4B6B6}Red \\
+282 & Nutanix (NTNX) & Information Technology & 4.2 & 0.18 & \cellcolor[HTML]{F4B6B6}Red \\
+283 & Hyatt (H) & Consumer Discretionary & 4.2 & 0.16 & \cellcolor[HTML]{F4B6B6}Red \\
+284 & Scotts Miracle-Gro Company (SMG) & Materials & 4.0 & 0.11 & \cellcolor[HTML]{F4B6B6}Red \\
+285 & RH (RH) & Consumer Discretionary & 3.9 & 0.17 & \cellcolor[HTML]{F4B6B6}Red \\
+286 & Manhattan Associates (MANH) & Information Technology & 3.8 & 0.16 & \cellcolor[HTML]{F4B6B6}Red \\
+287 & Synaptics (SYNA) & Information Technology & 3.7 & 0.11 & \cellcolor[HTML]{F4B6B6}Red \\
+288 & Guidewire Software (GWRE) & Information Technology & 3.4 & 0.14 & \cellcolor[HTML]{F4B6B6}Red \\
+289 & Hims \& Hers Health (HIMS) & Health Care & 3.4 & 0.24 & \cellcolor[HTML]{FFEB9C}Amber \\
+290 & Viavi Solutions (VIAV) & Information Technology & 3.4 & 0.14 & \cellcolor[HTML]{F4B6B6}Red \\
+291 & SiriusXM (SIRI) & Communication Services & 3.0 & 0.09 & \cellcolor[HTML]{F4B6B6}Red \\
+292 & UGI Corp (UGI) & Utilities & 3.0 & 0.09 & \cellcolor[HTML]{F4B6B6}Red \\
+293 & Docusign (DOCU) & Information Technology & 2.9 & 0.12 & \cellcolor[HTML]{F4B6B6}Red \\
+294 & Okta, Inc. (OKTA) & Information Technology & 2.4 & 0.17 & \cellcolor[HTML]{F4B6B6}Red \\
+295 & Talen Energy (TLN) & Utilities & 1.4 & 0.07 & \cellcolor[HTML]{F4B6B6}Red \\
+296 & Avis Budget Group (CAR) & Industrials & 1.3 & 0.04 & \cellcolor[HTML]{F4B6B6}Red \\
+297 & DigitalOcean (DOCN) & Information Technology & 1.3 & 0.04 & \cellcolor[HTML]{F4B6B6}Red \\
+298 & Chewy (CHWY) & Consumer Discretionary & 1.2 & 0.09 & \cellcolor[HTML]{F4B6B6}Red \\
+\hline
+\end{longtable}}
+Table \ref{tab:ranking} ranks all 298 companies of the S\&P MidCap 400 that are scored on 18 September 2026, the highest score first. The next picks are the first 10 and the lowest scores of Section \ref{sec:worst} the last 10. Companies with the same score are ordered by symbol, from A to Z, so when several share the last place the last rows can differ from the lowest scores of Section \ref{sec:worst}, which keeps the alphabetically first of them. Financials, Real Estate and companies with too few rules to score are not scored and so are not listed. The colours are those of Section \ref{sec:worst}, against the sell threshold of 0.4. The ranking shows where the score places each company today; it is not a recommendation to buy or sell anything.
+
 \section{Wallet contents by year}
 \label{app:contents}
 {\small

@@ -541,7 +541,9 @@ def _report(args: argparse.Namespace) -> int:
             folder / "rules.png",
         ),
     }
-    figures.update(_price_figures(prices, managed.trades, upcoming, settings, folder))
+    figures.update(
+        _price_figures(prices, managed.trades, upcoming, worst, settings, folder)
+    )
     if peer_view is not None:
         figures["peers"] = save_figure(
             plots.peer_profile(peer_view.profile, peer_view.label),
@@ -592,9 +594,24 @@ def _report(args: argparse.Namespace) -> int:
         picks=model.names,
         end=end,
         threshold=float(settings["sell_threshold"]),
-        tier_ratio=float(settings["tier_ratio"]),
+        tier_cutoffs=[float(c) for c in settings["tier_cutoffs"]],
         verdict_band=float(settings["verdict_band"]),
         static_note=_static_note(rules, report_text, as_of),
+        ranking=_ranking(
+            table, end, model, str(settings["share_column"]), folder / "ranking.csv"
+        ),
+        stress=_winner_stress(
+            table,
+            prices,
+            decisions,
+            model,
+            held,
+            counts=[int(n) for n in settings["winners_removed"]],
+            compare=compare,
+            amount_usd=float(settings["amount_usd"]),
+            start_years=start_years,
+            end=end,
+        ),
     )
     tex = report.build_report(
         inputs,
@@ -606,6 +623,65 @@ def _report(args: argparse.Namespace) -> int:
     print("Next picks:")
     print(upcoming[["symbol", "score", "score_share", "weight"]].to_string(index=False))
     return _compile(tex, args.data_dir)
+
+
+def _ranking(
+    table: pd.DataFrame,
+    end: pd.Timestamp,
+    model: evaluation.Wallet,
+    share_column: str,
+    path: Path,
+) -> pd.DataFrame:
+    """Return every scored company, best 0-to-1 score first, with its sector and score.
+
+    Also writes it to ``path``.
+    """
+    ranked = evaluation.ranking(
+        table, end, by=share_column, columns=["gics_sector", model.score_column]
+    ).rename(columns={share_column: "score_share", model.score_column: "score"})
+    ranked[
+        ["rank", "symbol", "gics_sector", "score", "score_share", "score_date"]
+    ].to_csv(path, index=False, float_format="%.4f")
+    return ranked
+
+
+def _winner_stress(  # noqa: PLR0913  one argument per setting of the run
+    table: pd.DataFrame,
+    prices: pd.DataFrame,
+    decisions: Sequence[pd.Timestamp],
+    model: evaluation.Wallet,
+    held: holding.BuyAndHold,
+    *,
+    counts: Sequence[int],
+    compare: Sequence[str],
+    amount_usd: float,
+    start_years: Sequence[int],
+    end: pd.Timestamp,
+) -> pd.DataFrame:
+    """Return the wallet's excess with the ``counts`` largest winners taken out.
+
+    The largest winners of ``held`` (most dollars ahead of the benchmark over all
+    lots) are removed from the scored table, the picks are ranked again without them
+    and the same money is bought on the same dates. The scores of the other companies
+    are not recomputed, so the test shows the next-best names filling the book.
+    """
+    runs = {0: held}
+    removed: dict[int, list[str]] = {0: []}
+    for count in counts:
+        out = holding.largest_winners(held.lots, count)
+        positions = evaluation.ranked_positions(
+            table[~table["symbol"].isin(out)], decisions, model
+        )
+        runs[count] = holding.buy_and_hold(
+            positions,
+            prices,
+            compare=compare,
+            amount_usd=amount_usd,
+            start_years=start_years,
+            end=end,
+        )
+        removed[count] = out
+    return holding.winner_stress(runs, removed, compare[0])
 
 
 def model_fingerprint(rules: dict[str, Any]) -> str:
@@ -637,19 +713,20 @@ def _static_note(rules: dict[str, Any], text: dict[str, Any], as_of: str) -> str
     return notice
 
 
-def _price_figures(
+def _price_figures(  # noqa: PLR0913, PLR0917  one argument per table the figures read
     prices: pd.DataFrame,
     trades: pd.DataFrame,
     upcoming: pd.DataFrame,
+    worst: pd.DataFrame,
     settings: dict[str, Any],
     folder: Path,
 ) -> dict[str, Path]:
-    """Write the price history of the picks, the USD traded and the next picks' prices."""
+    """Write the price history of the picks, the USD traded and the next and lowest prices."""
     scenario = int(settings["pick_scenario"])
     years = int(settings["pick_years"])
     end = pd.Timestamp(prices["date"].max())
     traded = trades[trades["scenario"] == scenario]
-    shown = {*traded["symbol"], *upcoming["symbol"]}
+    shown = {*traded["symbol"], *upcoming["symbol"], *worst["symbol"]}
     window = prices[
         prices["symbol"].isin(shown)
         & (prices["date"] > end - pd.DateOffset(years=years))
@@ -658,7 +735,7 @@ def _price_figures(
     return {
         "pick_prices": save_figure(
             plots.pick_prices(
-                window,
+                window[window["symbol"].isin(traded["symbol"])],
                 traded,
                 scenario,
                 years,
@@ -673,6 +750,10 @@ def _price_figures(
         "next_prices": save_figure(
             plots.next_prices(window, traded, upcoming, years),
             folder / "next_prices.png",
+        ),
+        "worst_prices": save_figure(
+            plots.lowest_prices(window, traded, worst, years),
+            folder / "worst_prices.png",
         ),
     }
 

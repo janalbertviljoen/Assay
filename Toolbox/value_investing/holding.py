@@ -28,6 +28,11 @@ BuyAndHold(lots, yearly, paths, summary)
     The results of ``buy_and_hold``.
 buy_and_hold(positions, prices, *, compare, amount_usd, start_years, end)
     Lots, value over time and summary per start year.
+largest_winners(lots, n)
+    The ``n`` companies that put the most dollars ahead of the benchmark.
+winner_stress(runs, removed, benchmark)
+    The annual return, the benchmark's and the excess of each start year with the
+    largest winners removed.
 rule_profile(lots, table, rule_ids)
     Dollar-weighted mean points per rule of the picks that beat the benchmark and of
     those that did not.
@@ -57,6 +62,11 @@ annualised excess of a pick : buy_and_hold
 money-weighted annual return of a scenario : buy_and_hold
     ``skatkis.financial_logic.money_weighted_return`` of the yearly amounts and the
     value at ``end``.
+largest winners : largest_winners
+    Per company, Σ ahead over its lots; the ``n`` highest, ties by symbol.
+excess of a stress run : winner_stress
+    annual_return of the wallet - annual_return of the benchmark, both money-weighted
+    (``buy_and_hold`` summary), per start year and number of winners removed.
 weighting check, rule information coefficient over picks : rule_weighting
     Per rule: the mean rule weight w_r on the picks' score dates (overall, for the
     picks that beat the benchmark and for the others); gap = mean points of the picks
@@ -83,7 +93,7 @@ pandas, ``skatkis.analysis``, ``skatkis.financial_logic`` and ``value_investing`
 (``inputs``, ``rules``, ``scoring``).
 """
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
 import pandas as pd
@@ -279,6 +289,71 @@ def buy_and_hold(  # noqa: PLR0913  one keyword per setting of the run
         paths=pd.concat(path_frames, ignore_index=True)[columns],
         summary=pd.DataFrame(rows),
     )
+
+
+def largest_winners(lots: pd.DataFrame, n: int) -> list[str]:
+    """Return the ``n`` companies whose lots put the most dollars ahead of the benchmark.
+
+    Parameters
+    ----------
+    lots : pd.DataFrame
+        ``BuyAndHold.lots`` with ``symbol`` and ``ahead_usd`` (USD).
+    n : int
+        How many companies; ``0`` gives none.
+
+    Returns
+    -------
+    list[str]
+        Symbols, the largest total ``ahead_usd`` first; ties by symbol.
+    """
+    totals: dict[str, float] = {}
+    for symbol, usd in zip(lots["symbol"], lots["ahead_usd"], strict=True):
+        totals[str(symbol)] = totals.get(str(symbol), 0.0) + float(usd)
+    ranked = sorted(totals, key=lambda symbol: (-totals[symbol], symbol))
+    return ranked[:n]
+
+
+def winner_stress(
+    runs: Mapping[int, BuyAndHold],
+    removed: Mapping[int, Sequence[str]],
+    benchmark: str,
+) -> pd.DataFrame:
+    """Return each start year's excess over the benchmark for each number of winners removed.
+
+    Parameters
+    ----------
+    runs : Mapping[int, BuyAndHold]
+        ``buy_and_hold`` of the wallet with that many of the largest winners removed
+        from the ranking (``0`` for the wallet as it is).
+    removed : Mapping[int, Sequence[str]]
+        The symbols removed in each run.
+    benchmark : str
+        The holder in the summary that the wallet is measured against.
+
+    Returns
+    -------
+    pd.DataFrame
+        ``removed_count``, ``symbols``, ``scenario``, ``wallet_return``,
+        ``benchmark_return`` (money-weighted annual returns) and ``excess`` (their
+        difference, a fraction a year).
+    """
+    rows: list[dict[str, object]] = []
+    for count, run in sorted(runs.items()):
+        by = run.summary.set_index(["scenario", "holder"])["annual_return"]
+        for scenario in sorted(run.summary["scenario"].unique()):
+            wallet = float(by[(scenario, WALLET)])
+            index = float(by[(scenario, benchmark)])
+            rows.append(
+                {
+                    "removed_count": count,
+                    "symbols": ", ".join(removed[count]),
+                    "scenario": int(scenario),
+                    "wallet_return": wallet,
+                    "benchmark_return": index,
+                    "excess": wallet - index,
+                }
+            )
+    return pd.DataFrame(rows)
 
 
 def _annualised_excess(

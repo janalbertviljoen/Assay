@@ -229,6 +229,25 @@ look at each pick would show whether to sell one that is crashing out earlier. A
 analysis, after the buy side is settled: it needs a sell rule fixed beforehand and
 tested out-of-sample like any other.
 
+### The sell side uses another scale than the picks (2026-11-02, open → sell/short optimisation, VI_202611_001)
+
+The picks rank on the raw weighted score (`score_binned_weighted`); the sell rule and the
+report's colours use its 0-to-1 share (`score_weighted_share`), with a fixed threshold of
+0.4 (colour cut-offs 0.6, 0.4, 0.2). No record gives a reason for the mix: the share came
+with the wallet with sells (VI_202610_006) because a fixed threshold needs a fixed scale,
+since the raw score moves with the date's rule weights and with how many rules a company is
+measured on. The share is not neutral: a company measured on few rules (the floor is five
+of ten) can reach a high share on little evidence, which puts SMCI first in the S&P 500
+ranking by share (2026-10-31 data) while the picks are FSLR, SNA, CTSH and others. The
+sell side has never been studied on its own (user, 2026-11-02).
+
+Candidate: a moving threshold on the raw score, relative to the date (a bottom fraction
+or a rank cut-off), tested as a methodology change with the S&P 500 baseline recorded
+first, and the letters read before it (`AGENTS.md`, "Methodology vs refactor"). The user
+noted (2026-11-02) that the cut-off was checked in an earlier optimisation without
+showing a problem; that check is not in the records. Pencilled in for the study of the
+sell and short optimisation, not before.
+
 ### Optimisation candidates (2026-11-01, open → S_202611_003, VI_202611_001)
 
 Collected for the first study (user, 2026-11-01):
