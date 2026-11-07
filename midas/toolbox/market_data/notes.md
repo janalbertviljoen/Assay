@@ -33,6 +33,25 @@ global coverage (Compustat Global, LSEG Worldscope, FactSet) reopen the data bud
 spec §9.1. The user chose a broader US universe (2026-10-31); Japan and ESEF stay
 candidates for later.
 
+### Financial Modeling Prep (FMP) MCP server as a candidate source (2026-11-04, open, parked)
+
+The user has an FMP API key and its MCP endpoint (`https://financialmodelingprep.com/mcp`,
+key passed as the `apikey` query parameter). Parked until there are more tokens (user,
+2026-11-04); not connected, nothing fetched. The key is not recorded here or anywhere in
+the repository.
+
+- **Standing decision it touches:** free sources only (MD_202610_001, decided 2026-10-31).
+  FMP is a vendor; its tier and limits are unchecked.
+- **Gaps it might fill:** companies that left the index (survivorship), predecessor CIKs,
+  quarterly figures for the floating P/E idea (value_investing notes, "Infer rules between
+  filings"), and the 400 and 600 membership history (MD_202611_001).
+- **To check before use:** whether values are point-in-time and first-reported or restated
+  (`quant.md`); the free tier's history and call limits; the terms on storing the data.
+- **If connected:** the key comes from the environment (`FMP_API_KEY`), registered at local
+  scope or with variable expansion, never written into the checked-in `.mcp.json`; raw data
+  goes only into the git-ignored `data/`. The key was pasted into a chat on 2026-11-04, so
+  rotate it.
+
 ## Data issues
 
 ### Yahoo prices and dividends are split-adjusted as of the fetch date (2026-10-31, open → MD_202610_002)
