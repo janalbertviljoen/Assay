@@ -96,3 +96,4 @@ until the portfolio engine (S_202610_006) replaces it. The index and the rename 
 | 2026-11-01 | The beta is a trust exercise among friends with private-repository access; a restricted `member` profile applies before any outside member (§3) | user |
 | 2026-11-01 | Ten picks per report for now; the worst list in Green, Amber and Red with "not a recommendation"; versioning and per-member storage wait (`assay/open_decisions.md`, VI_202611_002) | user |
 | 2026-11-01 | Midas's wordplay bank and classical traits are recorded in the character sheet (S_202611_002) | user |
+| 2026-11-07 | Beta access (S_202611_004): a free-hosted read-only Midas link for testers and a per-tester "Assay user" repository for VS Code testers; a strategy is stored in Assay only once accredited; the SOP, instructions and records stay private and are never served whole | user |
