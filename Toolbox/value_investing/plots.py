@@ -597,14 +597,14 @@ def pick_prices(  # noqa: PLR0913  one keyword per layout setting
     columns = 4
     title = (
         f"Price over {years} years of the companies traded by the investor "
-        f"from {scenario} and the next picks"
+        f"from {scenario}"
     )
     if len(change) > page:
         columns = ends  # the best on the first row, the worst on the second
         change = pd.concat([change.head(ends), change.tail(ends)])
         title = (
             f"Price over {years} years: the {ends} best and {ends} worst of the "
-            f"companies traded by the investor from {scenario} and the next picks"
+            f"companies traded by the investor from {scenario}"
         )
     return plot_small_multiples(
         prices,
@@ -614,7 +614,10 @@ def pick_prices(  # noqa: PLR0913  one keyword per layout setting
         points=points,
         point_kind="action",
         point_size="usd",
-        point_styles={"buy": ("tab:green", "^"), "sell": ("tab:red", "v")},
+        point_styles={
+            "buy": ("tab:green", "^"),
+            "sell": ("tab:red", "v"),
+        },
         panel_order=[str(s) for s in change.index],
         panel_titles={str(s): f"{s}  {c:+.0%}" for s, c in change.items()},
         columns=columns,
@@ -645,21 +648,77 @@ def next_prices(
     decision. The tiles have the same size, one per pick, 5 to a row (10 picks: 2 rows
     by 5 columns).
     """
-    symbols = [str(s) for s in next_picks["symbol"]]
+    return _candidate_prices(
+        prices,
+        trades,
+        [str(s) for s in next_picks["symbol"]],
+        years,
+        actions={"buy": "earlier buy"},
+        potential="potential buy",
+        title=f"The next picks: price over {years} years",
+    )
+
+
+def lowest_prices(
+    prices: pd.DataFrame, trades: pd.DataFrame, worst: pd.DataFrame, years: int
+) -> Figure:
+    """Plot the price of each of the lowest scores in rows of 5, as ``next_prices`` does.
+
+    Parameters
+    ----------
+    prices : pd.DataFrame
+        Columns ``symbol``, ``date``, ``close`` (split-adjusted, USD) over the window.
+    trades : pd.DataFrame
+        ``Managed.trades`` of one investor; its buys (green) and sales (red) of these
+        companies are marked.
+    worst : pd.DataFrame
+        The lowest scores (``symbol``), in the order shown.
+    years : int
+        The window's length, for the title.
+
+    Notes
+    -----
+    The potential sale is marked at the last price, the latest known before the next
+    decision; it is where the wallet with sells would sell if it held the company.
+    """
+    return _candidate_prices(
+        prices,
+        trades,
+        [str(s) for s in worst["symbol"]],
+        years,
+        actions={"buy": "earlier buy", "sell": "earlier sale"},
+        potential="potential sale",
+        title=f"The lowest scores: price over {years} years",
+    )
+
+
+def _candidate_prices(  # noqa: PLR0913  one keyword per mark and label of the tiles
+    prices: pd.DataFrame,
+    trades: pd.DataFrame,
+    symbols: list[str],
+    years: int,
+    *,
+    actions: dict[str, str],
+    potential: str,
+    title: str,
+) -> Figure:
+    """Plot one tile per symbol: its price, the earlier ``actions`` and a potential trade.
+
+    ``actions`` maps a trade's ``action`` to its mark's name; the potential trade is
+    marked at the last price in orange.
+    """
     own = prices[prices["symbol"].isin(symbols)]
-    buys = trades[(trades["action"] == "buy") & trades["symbol"].isin(symbols)]
-    earlier = buys.merge(
-        own, left_on=["symbol", "decision_date"], right_on=["symbol", "date"]
-    ).assign(kind="earlier buy")
+    marks = [
+        trades[(trades["action"] == action) & trades["symbol"].isin(symbols)]
+        .merge(own, left_on=["symbol", "decision_date"], right_on=["symbol", "date"])
+        .assign(kind=kind)[["symbol", "date", "close", "kind"]]
+        for action, kind in actions.items()
+    ]
     last = own.sort_values("date").groupby("symbol", as_index=False).last()
     points = pd.concat(
-        [
-            earlier[["symbol", "date", "close", "kind"]],
-            last[["symbol", "date", "close"]].assign(kind="potential buy"),
-        ],
+        [*marks, last[["symbol", "date", "close"]].assign(kind=potential)],
         ignore_index=True,
     )
-    change = _price_change(own)
     return plot_small_multiples(
         own,
         x="date",
@@ -669,12 +728,12 @@ def next_prices(
         point_kind="kind",
         point_styles={
             "earlier buy": ("tab:green", "^"),
-            "potential buy": ("tab:orange", "o"),
+            "earlier sale": ("tab:red", "v"),
+            potential: ("tab:orange", "o"),
         },
         panel_order=symbols,
-        panel_titles={str(s): f"{s}  {c:+.0%}" for s, c in change.items()},
         columns=min(5, max(1, len(symbols))),
-        title=f"The next picks: price over {years} years",
+        title=title,
         ylabel="USD",
     )
 

@@ -9,7 +9,7 @@
 # {best_company_share} (the company worth most across its purchases, and its share of the
 # 2016 investor's value); {winners}, {losers}, {winner_rules}, {loser_rules} (named from
 # [rule_names]), {loss_years}; the wallet with sells: {managed_s}, {managed_rate_s},
-# {threshold}, {tier_edge} (the Red/Amber edge), {first_start}, {sales}, {sold_usd}; next year: {next_score_date},
+# {threshold}, {tier_green}, {tier_amber}, {tier_red} (the colour cut-offs), {first_start}, {sales}, {sold_usd}; next year: {next_score_date},
 # {next_picks}, {worst_count}, {worst_list}. Inline maths between $...$;
 # write { and } inside texts as {{ and }}.
 
@@ -105,21 +105,22 @@ just under {threshold}. Holdings are sold, never sold short. The proceeds are ad
 table_caption = "Sales of the investor who started in {first_start}: share of each holding sold, its score on the 0-to-1 scale, and the proceeds."
 sold_title = "Sold in the wallet"
 sold_text = """Table [[tab:sales]] lists the {sales} sales of the investor who started in {first_start}, worth {sold_usd} USD in \
-all. They are the wallet's own cash flows; the list below does not depend on what anyone holds."""
+all. They are the wallet's own cash flows."""
 worst_title = "Lowest scores in the index"
-worst_caption = "The {worst_count} lowest-scoring of the companies scored on the latest score date: sector, score, score on the 0-to-1 scale and colour (Green, Amber or Red; not a recommendation)."
+worst_caption = "The {worst_count} lowest-scoring of the companies scored on the latest score date: sector, score, score on the 0-to-1 scale and colour (Green, Amber, Red or Black; not a recommendation)."
+worst_figure = "Share price of each of the {worst_count} lowest scores (USD, split-adjusted, dividends excluded) over the last {pick_years} years: earlier purchases of the investor who started in {pick_scenario} in green, earlier sales in red, the potential sale at the latest price in orange."
 worst_text = """These are the {worst_count} lowest scores, as many as the picks, among the companies of the {index} that \
-are scored on {next_score_date}, whether or not anyone holds them: {worst_list} (Table [[tab:worst]]). \
+are scored on {next_score_date}, whether or not anyone holds them: {worst_list} (Table [[tab:worst]], prices in Figure [[fig:worst-prices]]). \
 Financials, Real Estate and companies with too few rules to score are not scored and so cannot appear. \
 Companies with the same score are ordered by symbol, so when several share the last place, the \
 alphabetically first are shown. The list shows where the score ranks these companies today; it is not a \
 recommendation to buy, sell or sell short anything. A score of 0 means only that no rule awarded the \
 company any points; it says nothing about what the company is worth.
 
-The last column colours each score on the 0-to-1 scale against the sell threshold of {threshold}. Green is \
-a score above {threshold}. Amber is a score from {tier_edge} up to and including {threshold}: a company one \
-would not buy, and would hold only if already owned. Red is a score below {tier_edge}: a company one \
-might start to think about selling. The colours are not the rule of the wallet with sells. That rule is \
+The last column colours each score on the 0-to-1 scale. Green is a score above {tier_green}: a company one \
+would buy. Amber is a score above {tier_amber} up to and including {tier_green}: a company one would not buy, \
+and would hold only if already owned. Red is a score above {tier_red} up to and including {tier_amber}, and Black \
+a score of {tier_red} or less, down to 0: companies one might start to think about selling. The colours are not the rule of the wallet with sells. That rule is \
 mechanical: at or below {threshold} it sells part of a holding, the more the lower the score, and at 0 all \
 of it, whatever the colour. The sell signal on these companies has not been tested: no test has measured \
 what the lowest scores did afterwards. The cut-offs are those the score uses today and are not fixed. The \
@@ -219,7 +220,7 @@ figure = "Mean points per rule of the Magnificent 7 and of our picks on the deci
 [history]
 title = "Price history of the picks"
 text = """Figure [[fig:pick-prices]] shows the share price of every company the investor who \
-started in {pick_scenario} bought or sold, and of the next picks, over the last {pick_years} years. The price is \
+started in {pick_scenario} bought or sold over the last {pick_years} years. The price is \
 split-adjusted and excludes dividends, as a price chart shows it; the companies run from the best to the worst price change over \
 the {pick_years} years, given beside each name; when they do not fit on one page, only the {pick_ends} best and the {pick_ends} \
 worst are shown. Each purchase is marked in green \
@@ -331,10 +332,9 @@ looks too good, so I removed the biggest winners as if they had never existed.
 shortages appear, the typical manager simply can't wait to expand capacity". (1989) "Time is the friend of the \
 wonderful business, the enemy of the mediocre."
 
-**Midas:** The 1987 passage is about insurance; I apply it to chip makers by analogy. With the three largest winners removed (Applied Materials, Lam Research and Micron) the wallet \
-still beat the index by 3.7, 1.9 and 2.1 points a year for the investors who started in 2016, 2020 and 2023; with \
-five removed, by 0.3 to 2.3 points. The edge is present in this sample of the S&P 500 but thin, and it sits in chip and materials \
-companies after 2009. On the S&P 400 it disappears without its three largest winners. Treat it with care.
+**Midas:** The 1987 passage is about insurance; I apply it to chip makers by analogy. Table [[tab:winners]] holds the result, computed with this report: the wallet \
+still beats the index without its largest winners, but by much less. The edge is present in this sample but thin, and it sits in chip and materials \
+companies after 2009. Treat it with care.
 
 **What the tests showed.** The results are for holding over years, not months: the picks are bought twice a \
 year and not sold. The concentration is the main risk, and one or two big winners carry much of the gain, so they \
@@ -381,26 +381,32 @@ companies (the samples share most of their companies, so this is not independent
 by 9 to 15 points a year on average depending on the start year, and by about 5 points in the worst sample. \
 The investor who started in 2020 earns 27.7% a year against 15.9% in the index. The gain is concentrated: \
 Micron makes up 24% and Lam Research 16% of the 2016 investor's gain. \
-They still beat it with the three largest winners removed as if they had never existed (Applied Materials, \
-Lam Research and Micron): by 3.7, 1.9 and 2.1 points a year for the investors who started in 2016, 2020 and \
-2023, and by 8.9 for 2025. With five removed (adding Nucor and Nvidia) the margin shrinks to 0.3 to 2.3 points \
-for the first three. The edge is present in this sample of the index but thin, and concentrated in chip and materials companies \
-that did well in a long bull market after 2009.
+Table [[tab:winners]], computed with this report, runs the wallet again with the largest winners removed as if \
+they had never existed. The edge is present in this sample of the index but shrinks as they are removed, and it is \
+concentrated in chip and materials companies that did well in a long bull market after 2009.
 
-The other two indices do not confirm it. On the S&P 400 the picks beat their fund by 2 to 5 points a year for the \
-2016 to 2023 starts, and with the three largest winners removed the margin is gone (0.4, -0.4 and -0.1). On the \
-S&P 600 the investors who started in 2016 and 2020 are ahead by about 6 points, which survives the removal of \
-the three largest winners, while those who started in 2023 and 2025 trail the fund. The lists of the S&P 400 and \
+The other two indices do not confirm it as strongly: their own reports carry the same table, and it is the one to read \
+for them. The lists of the S&P 400 and \
 600 give no entry dates and lose the companies that grew into a larger index, so these two tests are biased and \
 not yet a verdict on the rules. Companies that left the index are missing from every test, which flatters the \
 results."""
 table_caption = "The tests the model must pass before launch, and where each stands."
+winners_title = "Without the biggest winners"
+winners_caption = "Money-weighted return a year of the wallet above the {index}, in percentage points, by start year, as it is and with the largest winners removed from the ranking (computed with this report)."
+winners_text = """A few companies carry much of any wallet's gain, and the next quarter may offer fewer. To see how the result \
+would stand without them, the wallet was run again with the largest winners removed as if they had never been in the \
+index: the companies that put the most dollars ahead of the {index} over all purchases. In order, the largest first, \
+they are {removed}; each column removes the first of them that its heading counts. The picks are ranked again \
+without them, so the next-best companies fill the book on the same dates with the same money (Table [[tab:winners]]). The scores of the \
+remaining companies are not recomputed, and the winners were found with hindsight, so the table shows how \
+dependent the result is on them, not what would have been picked. A column close to the first one means the gain \
+does not rest on those companies; a column far below it means it does."""
 
 [testing.table]
 header = ["Test", "What is checked", "Result", "Status"]
 columns = "l p{3.6cm} p{4.6cm} p{2.3cm}"
 rows = [
-  ["Winners removed", "The wallet still beats its index with the 3 largest winners removed", "S&P 500: yes, by 1.9 to 3.7 points (2016 to 2023 starts). S&P 400: no. S&P 600: mixed", "S&P 500 passed in-sample; others not"],
+  ["Winners removed", "The wallet still beats its index with the 3 largest winners removed", "Computed with each report: Table [[tab:winners]]", "Read from the table; in-sample"],
   ["Company samples", "Repeated samples, each leaving out a random part of the companies", "S&P 500: ahead of the index in every sample (the samples share most of their companies)", "Passed on the S&P 500, in-sample"],
   ["Unseen companies", "The score frozen, then run once on a part of the companies never used", "Positive, but two companies gave 99% of the gain (earlier sixteen-rule score)", "To rerun"],
   ["Other indices", "The score beats random picks of its own index on the S&P 400 and 600", "Not reproduced", "Open"],
@@ -427,6 +433,18 @@ year), and trading costs and taxes must be included."""
 title = "Every purchase"
 text = ""
 table_caption = "Every purchase of the wallet with sells of the investor who started in {first_start}: weight in the decision's purchase, USD invested (the decision's 100 USD and the proceeds of sales), split-adjusted price at purchase and today, USD sold from it later, USD it keeps today and its total return with dividends, (sold + kept) / invested - 1."
+
+[ranking]
+title = "Every company ranked"
+caption = "All {ranked_count} companies of the {index} scored on {next_score_date}, from the highest score on the 0-to-1 scale to the lowest: sector, that score, the score, colour (Green, Amber, Red or Black; not a recommendation) and whether the company is one of the next picks."
+text = """Table [[tab:ranking]] ranks all {ranked_count} companies of the {index} that are scored on {next_score_date} by their score \
+on the 0-to-1 scale, the highest first. That scale is the share of the most a company could score on the rules \
+it is measured on, so it is not the score the wallet ranks by: the next picks are chosen by the score in the fifth \
+column, and are marked, so they need not be the first rows of this list, and the lowest scores of Section [[sec:worst]] \
+are ordered by that score too. Companies with the same 0-to-1 score are ordered by symbol. Financials, Real Estate \
+and companies with too few rules to score are not scored and so are not listed. The colours are those of \
+Section [[sec:worst]]: Green above {tier_green}, Amber above {tier_amber}, Red above {tier_red}, Black at or below it. \
+The ranking shows where the score places each company today; it is not a recommendation to buy or sell anything."""
 
 [rule_names]
 G2a = "current ratio"

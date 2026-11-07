@@ -229,6 +229,25 @@ look at each pick would show whether to sell one that is crashing out earlier. A
 analysis, after the buy side is settled: it needs a sell rule fixed beforehand and
 tested out-of-sample like any other.
 
+### The sell side uses another scale than the picks (2026-11-02, open → sell/short optimisation, VI_202611_001)
+
+The picks rank on the raw weighted score (`score_binned_weighted`); the sell rule and the
+report's colours use its 0-to-1 share (`score_weighted_share`), with a fixed threshold of
+0.4 (colour cut-offs 0.6, 0.4, 0.2). No record gives a reason for the mix: the share came
+with the wallet with sells (VI_202610_006) because a fixed threshold needs a fixed scale,
+since the raw score moves with the date's rule weights and with how many rules a company is
+measured on. The share is not neutral: a company measured on few rules (the floor is five
+of ten) can reach a high share on little evidence, which puts SMCI first in the S&P 500
+ranking by share (2026-10-31 data) while the picks are FSLR, SNA, CTSH and others. The
+sell side has never been studied on its own (user, 2026-11-02).
+
+Candidate: a moving threshold on the raw score, relative to the date (a bottom fraction
+or a rank cut-off), tested as a methodology change with the S&P 500 baseline recorded
+first, and the letters read before it (`AGENTS.md`, "Methodology vs refactor"). The user
+noted (2026-11-02) that the cut-off was checked in an earlier optimisation without
+showing a problem; that check is not in the records. Pencilled in for the study of the
+sell and short optimisation, not before.
+
 ### Optimisation candidates (2026-11-01, open → S_202611_003, VI_202611_001)
 
 Collected for the first study (user, 2026-11-01):
@@ -288,6 +307,39 @@ their change lists), which is why they have 47 and 28 scored dates against the 5
 The data (prices, EDGAR facts) is already fetched for all three indices together; the
 membership by date across them is what is missing. Postponed as a larger refactor (user,
 2026-11-01).
+
+### Infer rules between filings; follow companies across indices (2026-11-04, open, future idea → VI_202611_001, MD_202611_001)
+
+Idea (user, 2026-11-04). Fundamentals change four times a year, but prices change daily.
+If earnings do not move much in the four months between statements, the P/E can float with
+the price: take the last reported earnings, divide the day's price by them, and read the
+rule between filing dates (interpolation of the ratio, not of the earnings). The same
+reasoning may let other rules be inferred between releases. Two open questions:
+
+1. **Which rules can be inferred?** First read, to be checked against `Toolbox/`: the rules
+   that divide a price by a reported figure move with the price alone (G6, G7, NN, E6, B5,
+   and the Graham number GN against price); the earnings yield of Q1 moves the same way.
+   Rules built only from reported figures (G2A, G2B, E1, E2, G3, G5, B1, M1) change at a
+   filing; they could be projected from the trend of the last quarters, which is a forecast
+   and weaker. G4 and E4 change with a declared dividend, which is an event, not an
+   interpolation.
+2. **Can we reach ten?** Of the ten default rules (G6, G2A, G7, G2B, E2, NN, E1, G5, B1,
+   E4), only G6, G7 and NN are price-driven, so on this first read three could float daily
+   and seven could not. Whether ten is reachable depends on how many of the balance-sheet and
+   growth rules a trend projection can carry without adding forward information. Unknown;
+   test before assuming.
+
+Cautions. Earnings can jump between filings (a write-down, an acquisition), so the inferred
+P/E needs a flag that says how old the earnings are, and it must use only figures filed by
+the date (point-in-time, `quant.md`). The decision dates are quarterly today, so the gain is
+a finer date for a decision, an earlier exit signal, or a daily watch list, not a change to
+the quarterly score. Any change to the rule convention is a methodology change.
+
+Companion idea: **track a company across indices** (user, 2026-11-04). A company moves
+between the S&P 400, 500 and 600 as it grows or shrinks, and its history should follow it,
+so that a rule can be inferred and tested on one continuous series per company. This is the
+combined S&P 1500 universe with the index of each date (MD_202611_001; see "Index migration
+biases the 400 and 600 tables" above). Not started.
 
 ### Tried and not used (2026-11-01, standing list → VI_202611_001)
 

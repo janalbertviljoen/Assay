@@ -46,6 +46,8 @@ book_weights(scores, wallet, *, side)
     The weights of the companies bought or sold on one date.
 ranked_positions(table, dates, wallet)
     The ranked wallet's positions on each decision date.
+ranking(table, day, *, by, columns)
+    Every scored company on the latest rebalance date, best to worst by one column.
 ranked_wallet(positions, prices, wallet, settings, *, benchmark)
     The ranked wallet's return and excess per decision.
 correlation_curve(table, prices, dates, settings, *, benchmark)
@@ -72,6 +74,10 @@ ranked book weights : book_weights
     ``score``: buy w = s / Σ s over the bought companies, sell equal
     weights; ``rank``: the rank weights, tied companies sharing the mean of the weights
     of the ranks they span, normalised to sum 1. Equal weights when the sum is 0.
+ranking of the index : ranking
+    All companies with a value in column ``by`` on the latest rebalance date on or
+    before ``day``, sorted by it from the highest, ties by symbol; ``rank`` counts from 1
+    in that order.
 ranked wallet excess : ranked_wallet
     Per book, e = Σ a e_i / A, with a each position's USD, e_i its excess (buy r - b,
     sell b - r) and A the book's money; the wallet is the buy book: wallet return = b +
@@ -599,6 +605,58 @@ def ranked_positions(
                 )
             )
     return pd.concat(frames, ignore_index=True)
+
+
+def ranking(
+    table: pd.DataFrame,
+    day: pd.Timestamp,
+    *,
+    by: str,
+    columns: Sequence[str] = (),
+) -> pd.DataFrame:
+    """Return every scored company on the latest rebalance date, best to worst.
+
+    Parameters
+    ----------
+    table : pd.DataFrame
+        The buyability table (``symbol``, ``date`` and the columns named below).
+    day : pd.Timestamp
+        The latest rebalance date on or before it is used.
+    by : str
+        The column that ranks the companies, highest first (e.g. the 0-to-1 score).
+    columns : Sequence[str]
+        Further columns of the table to carry along.
+
+    Returns
+    -------
+    pd.DataFrame
+        ``rank`` (1 for the highest ``by``), ``symbol``, ``score_date``, ``by`` and
+        ``columns``, in rank order; a tie is ordered by symbol. Companies without a
+        value in ``by`` are left out. Empty when no rebalance date is known by ``day``.
+
+    Notes
+    -----
+    The wallet's picks rank by its own score column, not by the 0-to-1 score, so the
+    first rows of a ranking by ``by`` need not be the picks.
+    """
+    scored = sorted(pd.Timestamp(d) for d in table["date"].unique())
+    known = [d for d in scored if d <= day]
+    if not known:
+        return pd.DataFrame(columns=["rank", "symbol", "score_date", by, *columns])
+    latest = known[-1]
+    own = table.loc[table["date"] == latest].dropna(subset=[by]).set_index("symbol")
+    ordered = own[by].sort_index().sort_values(ascending=False, kind="stable")
+    result = pd.DataFrame(
+        {
+            "rank": range(1, len(ordered) + 1),
+            "symbol": ordered.index,
+            "score_date": latest,
+            by: ordered.to_numpy(),
+        }
+    )
+    for column in columns:
+        result[column] = own[column].reindex(ordered.index).to_numpy()
+    return result
 
 
 def ranked_wallet(
