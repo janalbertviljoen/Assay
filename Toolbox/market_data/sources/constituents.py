@@ -33,10 +33,12 @@ parse_constituents(content)
     The current members table, columns found by header.
 parse_changes(content)
     The additions and removals table.
+CONSTITUENT_SCHEMA, CHANGE_SCHEMA
+    The schemas of the two tables.
 
 Dependency rule
 ---------------
-pandas, the standard library and ``skatkis.io``.
+pandas, the standard library, ``skatkis.io`` and ``skatkis.pipelines``.
 """
 
 import json
@@ -49,6 +51,14 @@ import pandas as pd
 
 from Toolbox.skatkis.io.api import ApiClient
 from Toolbox.skatkis.io.provider import DataProvider, RawPayload
+from Toolbox.skatkis.pipelines.contracts import Schema
+from Toolbox.skatkis.pipelines.schema import (
+    from_dtypes,
+    identifier,
+    positive,
+    required,
+    unique_key,
+)
 
 API_URL = "https://en.wikipedia.org/w/api.php"
 USER_AGENT = "trading-bot/0.1 (personal research; index membership)"
@@ -75,6 +85,22 @@ CHANGE_COLUMNS: dict[str, str] = {
     "reason": "string",
 }
 """Index changes on their effective date; an addition or a removal may be missing."""
+
+CONSTITUENT_SCHEMA: Schema = from_dtypes(
+    CONSTITUENT_COLUMNS,
+    {
+        "symbol": identifier | required | unique_key,
+        "security": required,
+        "gics_sector": identifier | required,
+        "gics_sub_industry": identifier | required,
+        "cik": positive,
+    },
+)
+"""The members table: one row per listed symbol (two share classes of one company share
+a CIK); ``date_added`` and ``cik`` may be missing, as the page gives them."""
+
+CHANGE_SCHEMA: Schema = from_dtypes(CHANGE_COLUMNS, {"date": required})
+"""The changes table: no key, since one date may carry several changes."""
 
 
 class ConstituentsParseError(ValueError):

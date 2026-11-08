@@ -154,11 +154,55 @@ export FRED_API_KEY=...                       # optional
 - Prices, dividends, splits and the exchange rate are small and fetched in full for
   each as-of date.
 - Tables are written to `data/interim/<source>/<as_of>/` and the summary printed lists,
-  per source, what was fetched, what was reused and the rows written.
+  per source, what was fetched, what was reused, what failed and the rows written; the
+  reasons of the first ten failures follow.
+- **Every table passes its gate before it is written** (below). A company's facts and a
+  symbol's prices, dividends and splits are checked on their own first: one that breaks
+  its schema, or has a column too many or too few, is left out and listed as failed with
+  the reason, like a fetch or parse failure, and the rest of the update goes on. The
+  combined tables of a source are then all checked before any is written, so a failure
+  there (a key repeated across companies or symbols) leaves the folder as it was.
 - Until the historical S&P 500 membership is built, the companies (`--cik`) and symbols
   (`--ticker`) are given on the command line; `^SP500TR` is always added.
 - The command can be scheduled (macOS `launchd` or `cron`), for example weekly or after
   each earnings season.
+
+### Stored tables and their gate
+
+Each stored table has a schema in the source module that produces it, built from that
+module's column-to-dtype map, so a column is declared once:
+
+| Table | Folder under `data/interim/` | Schema (module) | Key |
+|---|---|---|---|
+| `facts` | `edgar_companyfacts/<as_of>/` | `FACTS_TABLE_SCHEMA` (`sources/edgar.py`) | `cik`, `accession`, `field`, `tag`, `unit`, `period_start`, `period_end` |
+| `prices` | `yahoo/<as_of>/` | `PRICE_SCHEMA` (`sources/prices.py`) | `symbol`, `date` |
+| `dividends` | `yahoo/<as_of>/` | `DIVIDEND_SCHEMA` (`sources/prices.py`) | `symbol`, `ex_date` |
+| `splits` | `yahoo/<as_of>/` | `SPLIT_SCHEMA` (`sources/prices.py`) | `symbol`, `date` |
+| `listings` | `yahoo/<as_of>/` | `LISTING_SCHEMA` (`sources/prices.py`) | `symbol` |
+| `constituents` | `constituents/<as_of>/<index>/` | `CONSTITUENT_SCHEMA` (`sources/constituents.py`) | `symbol` |
+| `changes` | `constituents/<as_of>/<index>/` | `CHANGE_SCHEMA` (`sources/constituents.py`) | none: one date may carry several changes |
+| `observations` | `fred/<as_of>/` | `OBSERVATION_SCHEMA` (`sources/fred.py`) | `series_id`, `date` |
+
+The facts key includes `period_start`, which is missing for an instant; two instants
+that agree on every other key column count as duplicates.
+
+The gate, `validation.check_table`, passes a table when its columns are exactly those of
+its schema (none undeclared, none missing) and every constraint holds; dtypes are not
+checked. It runs where `update.py` writes a table (the update lists its tables in
+`update.TABLE_SCHEMAS`) and where a tool reads one (each tool lists the stored tables it
+reads in its own `schema.py`, so it never imports the update to read). The main
+constraints:
+
+- **Prices** are positive where present (a day without a trade has missing prices, never
+  0), volume is non-negative, and prices and dividends must be in USD
+  (`prices.PRICE_CURRENCY`), since every later stage reads them as USD. Dividend amounts
+  and both parts of a split ratio are positive.
+- **Members** each have a GICS sector and sub-industry; the sectors carry no allowed set.
+- **Facts** may hold only the fields, taxonomies, tags and units of `TAG_MAP`, the ones
+  the parser reads. The read gate checks them too, so a facts table parsed under an
+  earlier `TAG_MAP` is refused until it is parsed again; `update` parses each company's
+  snapshot again on every run, the reused ones included. `filed` may precede `period_end` (a dividend declared ahead, a
+  share count on a cover page), so that is not a constraint.
 
 ## Checking the data and the report
 

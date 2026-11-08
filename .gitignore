@@ -7,3 +7,6 @@ data/
 .claude/settings.local.json
 .DS_Store
 results/**/*.log
+
+# The enterprise pipeline template (S_202611_005): another repository's code, kept local only.
+midas/skatkis.zip

@@ -11,10 +11,20 @@ a 10-K or 10-Q since its latest stored snapshot; otherwise that snapshot is reus
 Prices and the exchange rate are small and fetched in full for each as-of date. The
 terminal command (``python -m Toolbox.market_data update``) calls these functions.
 
+Every table passes the stored-table gate (``market_data.validation.check_table``)
+against its schema in ``TABLE_SCHEMAS`` before it is written, so a malformed table never
+reaches ``data/interim``. A company's facts and a symbol's prices, dividends and splits
+are checked first on their own: one that breaks a constraint, or has a column too many
+or too few, is left out and reported in ``UpdateResult.failed`` with the reason, like a
+fetch or parse failure, and the rest of the update goes on. The combined tables are
+checked again (a key repeated across companies or symbols), all of them before any is
+written, so a failure there leaves the folder as it was.
+
 Owns
 ----
-Which sources are updated, the incremental EDGAR rule, and the layout of the parsed
-tables per as-of date.
+Which sources are updated, the incremental EDGAR rule, the layout of the parsed tables
+per as-of date, and the list of the stored tables with their schemas
+(``TABLE_SCHEMAS``; each schema is owned by its source module).
 
 Must not
 --------
@@ -38,13 +48,16 @@ update_constituents(as_of, *, storage, provider, index, pages, ticker_ciks)
     One index's members and changes; tables ``constituents`` and ``changes``.
 UpdateResult
     What one update fetched, reused and wrote.
+TABLE_SCHEMAS
+    The schema of every stored table the update writes, by table name.
 
 Dependency rule
 ---------------
-pandas, the standard library, ``skatkis.io`` and ``market_data.sources``.
+pandas, the standard library, ``skatkis.io``, ``skatkis.pipelines``,
+``market_data.sources`` and ``market_data.validation``.
 """
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
@@ -52,13 +65,15 @@ from pathlib import Path
 import pandas as pd
 
 from Toolbox.market_data.sources.constituents import (
+    CHANGE_SCHEMA,
+    CONSTITUENT_SCHEMA,
     WikipediaPage,
     parse_changes,
     parse_constituents,
 )
 from Toolbox.market_data.sources.edgar import (
+    FACTS_TABLE_SCHEMA,
     EdgarCompanyFacts,
-    EdgarParseError,
     EdgarSubmissions,
     EdgarTickers,
     format_cik,
@@ -66,17 +81,36 @@ from Toolbox.market_data.sources.edgar import (
     parse_companyfacts,
     parse_ticker_ciks,
 )
-from Toolbox.market_data.sources.fred import FredSeries, load_fred
+from Toolbox.market_data.sources.fred import OBSERVATION_SCHEMA, FredSeries, load_fred
 from Toolbox.market_data.sources.prices import (
+    DIVIDEND_SCHEMA,
+    LISTING_COLUMNS,
+    LISTING_SCHEMA,
+    PRICE_SCHEMA,
+    SPLIT_SCHEMA,
     ChartTables,
-    PriceParseError,
     YahooChart,
     load_chart,
     yahoo_symbol,
 )
+from Toolbox.market_data.validation import check_table
 from Toolbox.skatkis.io.api import ApiClient, ApiError
 from Toolbox.skatkis.io.snapshots import SnapshotStore, fetch_snapshot, read_snapshot
 from Toolbox.skatkis.io.tables import write_table
+from Toolbox.skatkis.pipelines.contracts import Schema
+
+TABLE_SCHEMAS: dict[str, Schema] = {
+    "facts": FACTS_TABLE_SCHEMA,
+    "prices": PRICE_SCHEMA,
+    "dividends": DIVIDEND_SCHEMA,
+    "splits": SPLIT_SCHEMA,
+    "listings": LISTING_SCHEMA,
+    "constituents": CONSTITUENT_SCHEMA,
+    "changes": CHANGE_SCHEMA,
+    "observations": OBSERVATION_SCHEMA,
+}
+"""The schema of every stored table the update writes, by its file name under
+``<interim>/<source>/<as_of>/``; each is owned by its source module."""
 
 
 @dataclass(frozen=True)
@@ -116,8 +150,8 @@ class UpdateResult:
     folder : Path
         Where the tables were written.
     failed : dict[str, str]
-        Queries that could not be fetched or parsed, with the reason; the rest of the
-        update goes on without them.
+        Queries that could not be fetched or parsed, or whose table failed its schema,
+        with the reason; the rest of the update goes on without them.
     """
 
     source: str
@@ -183,15 +217,18 @@ def update_edgar(
                 content = fetch_snapshot(facts_provider, query, as_of, store)
                 snapshot_as_of, done = as_of, fetched
             frame = parse_companyfacts(content)
-        except (ApiError, EdgarParseError) as error:
+            frame["snapshot_as_of"] = pd.Timestamp(snapshot_as_of)
+            # Per company, so one bad filing loses that company, not the update.
+            check_table(frame, TABLE_SCHEMAS["facts"], f"facts of CIK {query}")
+        # ValueError covers parse errors, schema breaches and a column mismatch.
+        except (ApiError, ValueError) as error:
             failed[query] = str(error)
             continue
         done.append(query)
-        frame["snapshot_as_of"] = pd.Timestamp(snapshot_as_of)
         frames.append(frame)
     facts = pd.concat(frames, ignore_index=True) if frames else _empty_facts()
     folder = storage.folder(facts_provider.name, as_of)
-    write_table(facts, folder / "facts.parquet")
+    _write_all({"facts": facts}, folder)
     return UpdateResult(
         source=facts_provider.name,
         fetched=tuple(fetched),
@@ -243,13 +280,18 @@ def update_prices(
     failed: dict[str, str] = {}
     for ticker in tickers:
         try:
-            parsed.append(
-                (
-                    load_chart([ticker], provider=daily, store=store, as_of=as_of),
-                    load_chart([ticker], provider=monthly, store=store, as_of=as_of),
-                )
-            )
-        except (ApiError, PriceParseError) as error:
+            bars = load_chart([ticker], provider=daily, store=store, as_of=as_of)
+            months = load_chart([ticker], provider=monthly, store=store, as_of=as_of)
+            # Per symbol, so one bad bar loses that symbol, not the update.
+            for name, table in (
+                ("prices", bars.prices),
+                ("dividends", months.dividends),
+                ("splits", months.splits),
+            ):
+                check_table(table, TABLE_SCHEMAS[name], f"{name} of {ticker}")
+            parsed.append((bars, months))
+        # ValueError covers parse errors, schema breaches and a column mismatch.
+        except (ApiError, ValueError) as error:
             failed[ticker] = str(error)
     empty = load_chart([], provider=daily, store=store, as_of=as_of)
     folder = storage.folder("yahoo", as_of)
@@ -259,12 +301,11 @@ def update_prices(
         "splits": _concat([m.splits for _, m in parsed], empty.splits),
         "listings": _listings([m.prices for _, m in parsed]),
     }
-    for name, table in tables.items():
-        write_table(table, folder / f"{name}.parquet")
+    _write_all(tables, folder)
     return UpdateResult(
         source="yahoo",
         fetched=tuple(t for t in tickers if t not in stored and t not in failed),
-        reused=tuple(stored),
+        reused=tuple(t for t in stored if t not in failed),
         tables={name: len(table) for name, table in tables.items()},
         folder=folder,
         failed=failed,
@@ -275,12 +316,7 @@ def _listings(monthly: Sequence[pd.DataFrame]) -> pd.DataFrame:
     """Return each symbol's first monthly bar: columns ``symbol``, ``first_date``."""
     frames = [m[["symbol", "date"]] for m in monthly if not m.empty]
     if not frames:
-        return pd.DataFrame(
-            {
-                "symbol": pd.Series(dtype="string"),
-                "first_date": pd.Series(dtype="datetime64[ns]"),
-            }
-        )
+        return pd.DataFrame(columns=list(LISTING_COLUMNS)).astype(LISTING_COLUMNS)
     first: pd.Series = pd.concat(frames).groupby("symbol")["date"].min()
     return pd.DataFrame(
         {
@@ -345,8 +381,7 @@ def update_constituents(  # noqa: PLR0913  one keyword per input of the update
         )
     changes = parse_changes(fetch_snapshot(provider, changes_page, as_of, store))
     folder = storage.folder("constituents", as_of) / index
-    write_table(constituents, folder / "constituents.parquet")
-    write_table(changes, folder / "changes.parquet")
+    _write_all({"constituents": constituents, "changes": changes}, folder)
     return UpdateResult(
         source="constituents",
         fetched=tuple(p for p in dict.fromkeys(pages) if p not in stored),
@@ -375,7 +410,7 @@ def update_fx(
         series_ids, provider=provider, store=storage.snapshots, as_of=as_of
     )
     folder = storage.folder(provider.name, as_of)
-    write_table(observations, folder / "observations.parquet")
+    _write_all({"observations": observations}, folder)
     return UpdateResult(
         source=provider.name,
         fetched=tuple(s for s in series_ids if s not in stored),
@@ -383,6 +418,18 @@ def update_fx(
         tables={"observations": len(observations)},
         folder=folder,
     )
+
+
+def _write_all(tables: Mapping[str, pd.DataFrame], folder: Path) -> None:
+    """Check every table against its schema in ``TABLE_SCHEMAS``, then write them all.
+
+    All are checked before any is written, so a failing table leaves the folder as it
+    was rather than half updated.
+    """
+    for name, table in tables.items():
+        check_table(table, TABLE_SCHEMAS[name], f"{folder}/{name}")
+    for name, table in tables.items():
+        write_table(table, folder / f"{name}.parquet")
 
 
 def _concat(frames: list[pd.DataFrame], empty: pd.DataFrame) -> pd.DataFrame:
