@@ -23,15 +23,14 @@ Public API
 ----------
 LayerContract(name, seed_columns, input_schema, output_schema, grain, ...)
     Declares one layer's grain, seed columns, input and output schemas, model
-    joins, immutable inputs and an optional navigation description.
+    joins, immutable inputs and an optional description.
 safe_merge(*schemas)
     Merge schema dicts left to right, raising on conflicting definitions of the
     same column.
 
 Dependency rule
 ---------------
-No runtime dependency on registry implementations or domain schemas.
-Standard library only.
+No domain schemas. Standard library only.
 """
 
 from __future__ import annotations
@@ -53,15 +52,13 @@ class LayerContract:
 
     Grain and model_joins are intentionally orthogonal:
     - ``grain`` defines row-level uniqueness identity for the layer output.
-    - ``model_joins`` names the lookup models whose segment cols are appended
-      to the base join key at hydration time.  The resolver reads
-      ``model.col_map.segment_cols`` from the registry at runtime, so
-      client-specific segmentation columns require no contract changes.
+    - ``model_joins`` names the sources whose segmentation columns the layer
+      joins on; ``schema.bind`` fills it from the sources' ``layer_join``.
 
     Parameters
     ----------
     name : str
-        Unique layer identifier — matches the registry key.
+        Unique layer identifier, as in the pipeline schema's ``layers``.
     seed_columns : list[str]
         Columns that seed the layer (e.g. ``["symbol", "date"]``).  Sliced from
         the input source before the compute function is called.
@@ -72,18 +69,15 @@ class LayerContract:
     grain : list[str]
         Columns that together uniquely identify each output row.
     model_joins : list[str]
-        Names of registered models whose segment cols are spliced into the
-        join key during hydration.  Empty for layers with no model lookups.
+        Names of the sources whose segmentation columns extend the join key.
+        Empty for a layer that joins no segmented source.
     immutable_inputs : list[str]
         Upstream columns this layer must not overwrite.
     output_cols : list[str]
         Derived from ``output_schema.keys()`` automatically.
     description : str | None
-        One or two sentences documenting what this layer produces, for
-        the output workbook's navigation table
-        (skatkis.pipelines.preface.build_navigation_from_registry).
-        None if undocumented - the layer still runs, it just won't
-        appear in navigation.
+        One or two sentences on what this layer produces, for readers of
+        its output. None if undocumented; the layer still runs.
     """
 
     name: str

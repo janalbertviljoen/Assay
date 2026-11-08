@@ -11,10 +11,14 @@ Run from the repository root, after ``python -m Toolbox.market_data update``::
 
 Every command works on one index of ``config/indices.toml`` (``--index``, default
 ``sp500``): its members are the universe and its benchmark the comparison. It reads the
-stored tables of the as-of date, runs ``value_investing.pipeline`` with
-``config/rules.toml``, writes the buyability table to
+stored tables of the as-of date, each checked against its schema in
+``value_investing.schema.INPUT_TABLES`` as it is read (``market_data.validation.check_table``),
+runs ``value_investing.pipeline`` with ``config/rules.toml``, writes the buyability table to
 ``data/interim/value_investing/<as_of>/<index>/buyability_<view>.parquet`` per universe
-view, and the plots and the sample to ``results/value_investing/<index>/<as_of>/buyability/``.
+view, and the plots and the sample to ``results/value_investing/<index>/<as_of>/buyability/``;
+``buyability`` prints each view's pipeline report (the soft-expectation notices).
+The stored buyability tables are this tool's own output and are not checked when
+``evaluate`` and ``report`` read them.
 ``evaluate`` reads that table and writes the paper test of the score
 (``value_investing.evaluation``) and the ledger of one wallet (``value_investing.ledger``:
 ``ledger.md``, ``ledger.csv``, ``ledger_balance.csv``) to
@@ -60,6 +64,7 @@ from typing import Any
 import pandas as pd
 
 from Toolbox.market_data.sources.prices import yahoo_symbol
+from Toolbox.market_data.validation import check_table
 from Toolbox.skatkis.io.config import load_config
 from Toolbox.skatkis.io.figures import save_figure
 from Toolbox.skatkis.io.tables import read_table, write_table
@@ -76,6 +81,7 @@ from Toolbox.value_investing import (
 )
 from Toolbox.value_investing.inputs import index_universe, price_on
 from Toolbox.value_investing.pipeline import Buyability, Tables, buyability
+from Toolbox.value_investing.schema import INPUT_TABLES
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -192,6 +198,8 @@ def _buyability(args: argparse.Namespace) -> int:
         save_figure(figure, folder / f"{name}.png")
 
     print(f"Views {', '.join(views)}; diagnostics on {views[0]}")
+    for view, result in results.items():
+        print(f"{view}: {result.report.summary()}")
     print(
         f"{table['symbol'].nunique()} companies, {len(dates)} rebalance dates "
         f"({dates[0]:%Y-%m-%d} to {dates[-1]:%Y-%m-%d}), {len(pass_columns)} rules"
@@ -216,9 +224,7 @@ def _evaluate(args: argparse.Namespace) -> int:
     }
     # The detailed evaluation describes the first view; the comparison covers all.
     table = tables[views[0]]
-    prices = read_table(
-        index.interim / "yahoo" / args.as_of.isoformat() / "prices.parquet"
-    )
+    prices = _read(index.interim / "yahoo" / args.as_of.isoformat(), "prices")
     benchmark = index.benchmark
     settings = evaluation_settings(rules)
     trading_days = prices[prices["symbol"] == benchmark]["date"]
@@ -442,7 +448,7 @@ def _report(args: argparse.Namespace) -> int:
     index = _index(args)
     view = str(rules["universe"]["views"][0])
     table = read_table(index.tables / f"buyability_{view}.parquet")
-    prices = read_table(index.interim / "yahoo" / as_of / "prices.parquet")
+    prices = _read(index.interim / "yahoo" / as_of, "prices")
     settings = rules["report"]
     compare = [index.benchmark, *[str(s) for s in settings["compare"]]]
     start_years = [int(y) for y in settings["start_years"]]
@@ -514,7 +520,7 @@ def _report(args: argparse.Namespace) -> int:
     ).rename(columns={str(settings["share_column"]): "score_share"})
     upcoming = now[now["side"] == "buy"]
     worst = now[now["side"] == "sell"].sort_values(["score", "symbol"])
-    changes = read_table(index.members / "changes.parquet")
+    changes = _read(index.members, "changes")
     paths = pd.concat([held.paths, managed.paths], ignore_index=True)
 
     folder = index.results / "report"
@@ -761,23 +767,34 @@ def _price_figures(  # noqa: PLR0913, PLR0917  one argument per table the figure
 def _load_tables(
     index: _Index, as_of: str, rules: dict[str, Any], market: dict[str, Any]
 ) -> Tables:
-    """Return the stored tables of ``as_of`` the pipeline reads, with the index's universe."""
+    """Return the stored tables of ``as_of`` the pipeline reads, with the index's universe.
+
+    Each table passes the stored-table gate against its schema as it is read, so a table
+    written before the gate existed, or changed since, is checked too.
+    """
     interim = index.interim
     yahoo = interim / "yahoo" / as_of
     universe = index_universe(
-        read_table(index.members / "constituents.parquet"),
-        read_table(index.members / "changes.parquet"),
+        _read(index.members, "constituents"),
+        _read(index.members, "changes"),
         funds=market["benchmarks"]["sectors"],
         excluded=rules["universe"]["excluded_sectors"],
     )
     return Tables(
-        facts=read_table(interim / "edgar_companyfacts" / as_of / "facts.parquet"),
-        prices=read_table(yahoo / "prices.parquet"),
-        dividends=read_table(yahoo / "dividends.parquet"),
-        splits=read_table(yahoo / "splits.parquet"),
-        listings=read_table(yahoo / "listings.parquet"),
+        facts=_read(interim / "edgar_companyfacts" / as_of, "facts"),
+        prices=_read(yahoo, "prices"),
+        dividends=_read(yahoo, "dividends"),
+        splits=_read(yahoo, "splits"),
+        listings=_read(yahoo, "listings"),
         universe=universe,
     )
+
+
+def _read(folder: Path, name: str) -> pd.DataFrame:
+    """Read the stored table ``name`` from ``folder`` and check it against its schema."""
+    table = read_table(folder / f"{name}.parquet")
+    check_table(table, INPUT_TABLES[name], f"{folder}/{name}")
+    return table
 
 
 def _compile(tex: Path, data_dir: Path) -> int:
@@ -804,7 +821,7 @@ def _compile(tex: Path, data_dir: Path) -> int:
 
 def _company_names(path: Path) -> dict[str, str]:
     """Return each company's full name by price symbol, from the constituents table."""
-    constituents = read_table(path)
+    constituents = _read(path.parent, path.stem)
     return {
         yahoo_symbol(str(symbol)): str(name)
         for symbol, name in zip(

@@ -30,10 +30,12 @@ parse_fred(content, series_id)
     Raw JSON or CSV to one row per observation.
 load_fred(series_ids, *, provider, store, as_of)
     Snapshot and parse several series into one table.
+OBSERVATION_SCHEMA
+    The schema of the observations table.
 
 Dependency rule
 ---------------
-pandas, the standard library and ``skatkis.io``.
+pandas, the standard library, ``skatkis.io`` and ``skatkis.pipelines``.
 """
 
 import io
@@ -48,6 +50,13 @@ import pandas as pd
 from Toolbox.skatkis.io.api import ApiClient
 from Toolbox.skatkis.io.provider import DataProvider, RawPayload
 from Toolbox.skatkis.io.snapshots import SnapshotStore, fetch_snapshot
+from Toolbox.skatkis.pipelines.contracts import Schema
+from Toolbox.skatkis.pipelines.schema import (
+    from_dtypes,
+    identifier,
+    required,
+    unique_key,
+)
 
 API_URL = "https://api.stlouisfed.org/fred/series/observations"
 CSV_URL = "https://fred.stlouisfed.org/graph/fredgraph.csv"
@@ -61,6 +70,16 @@ OBSERVATION_COLUMNS: dict[str, str] = {
 }
 """One observation per day in the series' own unit (``DEXSFUS``: ZAR per USD). Days
 without a published value (holidays) keep their row with a missing value."""
+
+OBSERVATION_SCHEMA: Schema = from_dtypes(
+    OBSERVATION_COLUMNS,
+    {
+        "series_id": identifier | required | unique_key,
+        "date": required | unique_key,
+    },
+)
+"""The observations table: one row per series and day; the value is in the series' own
+unit and sign, so it carries no bound."""
 
 
 class FredParseError(ValueError):

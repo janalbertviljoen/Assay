@@ -9,16 +9,19 @@ into their gates.
 mode, so one failure lists every violated rule with its column, row count and up to
 five sample rows named by their unique-key values. The schema stays the single source
 of truth; Pandera is the engine. Nulls pass value checks unless the column is required,
-nothing is coerced, unknown columns are allowed and dtypes are not checked.
+nothing is coerced, unknown columns are allowed and dtypes are not checked. The [0, 1]
+and non-negative bounds allow ``schema.BOUND_TOLERANCE`` (1e-12) for rounding.
 
-The ``assert_*`` functions check one rule each and raise ``ValueError`` naming the
-caller's context. Tools compose them, with ``validate_from_schema``, into their own
-gates in the tool's ``validation.py``; no domain rule lives here.
+``assert_exact_columns`` and ``assert_required_columns`` check a table's columns and raise
+``ValueError`` naming the caller's context. Tools compose them, with
+``validate_from_schema``, into their own gates in the tool's ``validation.py``; no domain
+rule lives here. Value rules are checked only through the schema, so each is stated
+once.
 
 Owns
 ----
 The translation of schema flags to Pandera, the schema-driven validation and its error
-text, and the generic hard assertions.
+text, and the column assertions.
 
 Must not
 --------
@@ -33,20 +36,21 @@ to_pandera_schema(schema, context)
     The Pandera ``DataFrameSchema`` equivalent to a schema.
 SchemaValidationError
     ``ValueError`` with ``context`` and Pandera's ``failure_cases``.
-assert_required_columns, assert_required_if, assert_no_nulls, assert_unique_key,
-assert_probability_bounds, assert_positive, assert_non_negative, assert_allowed_values,
-assert_constant_columns
-    One rule each; raise ``ValueError`` naming ``context``.
+assert_exact_columns(df, columns, context)
+    Raise unless ``df`` has exactly ``columns``, none undeclared and none missing.
+assert_required_columns(df, required, context)
+    Raise if a column in ``required`` is absent.
 
 Dependency rule
 ---------------
-pandas, ``pandera.pandas``, the standard library and ``skatkis.pipelines.contracts``
-(the ``Schema`` type). No tool imports.
+pandas, ``pandera.pandas``, the standard library, ``skatkis.pipelines.contracts``
+(the ``Schema`` type) and ``skatkis.pipelines.schema`` (``BOUND_TOLERANCE``). No tool
+imports.
 """
 
 from __future__ import annotations
 
-from collections.abc import Callable, Hashable, Mapping, Sequence
+from collections.abc import Callable, Hashable, Sequence
 from typing import Any, cast
 
 import pandas as pd
@@ -54,6 +58,7 @@ import pandera.pandas as pa
 from pandera.errors import SchemaErrors
 
 from Toolbox.skatkis.pipelines.contracts import Schema
+from Toolbox.skatkis.pipelines.schema import BOUND_TOLERANCE
 
 # ---------------------------------------------------------------------------
 # Schema accessors
@@ -89,8 +94,23 @@ def _required_if(schema: Schema) -> dict[str, tuple[str, object]]:
 
 
 # ---------------------------------------------------------------------------
-# Hard assertions: one rule each, raise on violation
+# Column assertions: raise on a missing or undeclared column
 # ---------------------------------------------------------------------------
+
+
+def assert_exact_columns(
+    df: pd.DataFrame, columns: Sequence[str], context: str
+) -> None:
+    """
+    Raise unless ``df`` has exactly ``columns``, in any order.
+
+    An output gate uses it so that only declared columns leave a stage and none is
+    silently dropped; a column that may hold missing values must still be present.
+    """
+    undeclared = [c for c in df.columns if c not in columns]
+    if undeclared:
+        raise ValueError(f"[{context}] Undeclared columns: {undeclared}")
+    assert_required_columns(df, columns, context)
 
 
 def assert_required_columns(
@@ -102,99 +122,6 @@ def assert_required_columns(
         raise ValueError(
             f"[{context}] Missing required columns: {missing}\n"
             f"Columns present: {df.columns.tolist()}"
-        )
-
-
-def assert_required_if(
-    df: pd.DataFrame, conditions: Mapping[str, tuple[str, object]], context: str
-) -> None:
-    """Raise if a column is null on a row where its ``required_if`` condition holds."""
-    for column, (condition_column, value) in conditions.items():
-        subset = df.loc[df[condition_column] == value]
-        if subset.empty:
-            continue
-        assert_no_nulls(subset, [column], context)
-
-
-def assert_no_nulls(df: pd.DataFrame, columns: Sequence[str], context: str) -> None:
-    """Raise if any value in ``columns`` is null."""
-    null_counts = df[list(columns)].isna().sum()
-    nulls = null_counts[null_counts > 0]
-    if not nulls.empty:
-        raise ValueError(f"[{context}] Null values found:\n{nulls.to_string()}")
-
-
-def assert_unique_key(
-    df: pd.DataFrame, key_columns: Sequence[str], context: str
-) -> None:
-    """Raise if the combination of ``key_columns`` is not unique."""
-    key = list(key_columns)
-    duplicates = df[df.duplicated(subset=key, keep=False)]
-    if not duplicates.empty:
-        raise ValueError(
-            f"[{context}] Duplicate rows on key {key}:\n"
-            f"{duplicates[key].drop_duplicates().head().to_string()}"
-        )
-
-
-def assert_probability_bounds(
-    df: pd.DataFrame, columns: Sequence[str], context: str
-) -> None:
-    """Raise if any value in ``columns`` is outside [0, 1]; nulls pass."""
-    for column in columns:
-        outside = df[(df[column] < 0.0) | (df[column] > 1.0)]
-        if not outside.empty:
-            raise ValueError(
-                f"[{context}] {column!r} has values outside [0, 1]. "
-                f"Min: {df[column].min():.6f}  Max: {df[column].max():.6f}"
-            )
-
-
-def assert_positive(df: pd.DataFrame, columns: Sequence[str], context: str) -> None:
-    """Raise if any value in ``columns`` is zero or negative; nulls pass."""
-    for column in columns:
-        invalid = df[df[column] <= 0]
-        if not invalid.empty:
-            raise ValueError(
-                f"[{context}] {column!r} must be > 0. "
-                f"Found {len(invalid)} non-positive values. Min: {df[column].min()}"
-            )
-
-
-def assert_non_negative(df: pd.DataFrame, columns: Sequence[str], context: str) -> None:
-    """Raise if any value in ``columns`` is negative; nulls pass."""
-    for column in columns:
-        invalid = df[df[column] < 0]
-        if not invalid.empty:
-            raise ValueError(
-                f"[{context}] {column!r} must be >= 0. "
-                f"Found {len(invalid)} negative values. Min: {df[column].min()}"
-            )
-
-
-def assert_allowed_values(
-    df: pd.DataFrame, allowed: Mapping[str, set[Any]], context: str
-) -> None:
-    """Raise if a column holds a non-null value outside its allowed set."""
-    for column, values in allowed.items():
-        not_allowed = set(df[column].dropna().unique()) - values
-        if not_allowed:
-            raise ValueError(
-                f"[{context}] Disallowed values detected in {column!r}: {not_allowed}\n"
-                f"Allowed values: {values}."
-            )
-
-
-def assert_constant_columns(
-    df: pd.DataFrame, columns: Sequence[str], context: str
-) -> None:
-    """Raise if any column in ``columns`` holds more than one distinct non-null value."""
-    non_constant = [
-        column for column in columns if df[column].dropna().unique().size > 1
-    ]
-    if non_constant:
-        raise ValueError(
-            f"[{context}] Expected constant values for columns: {non_constant}"
         )
 
 
@@ -226,8 +153,7 @@ class SchemaValidationError(ValueError):
         self.failure_cases = failure_cases
 
 
-# Rule messages: the Pandera check labels and the lines of the error text, worded as
-# the assert_* functions word them.
+# Rule messages: the Pandera check labels and the lines of the error text.
 _MSG_NULL = "Null values found"
 _MSG_DUPLICATE = "Duplicate rows on key"
 _MSG_KEY_MISSING = "Missing unique-key columns"
@@ -299,7 +225,8 @@ def to_pandera_schema(schema: Schema, context: str = "") -> pa.DataFrameSchema:
     - ``required``: ``Column(required=True, nullable=False)``; otherwise
       ``Column(required=False, nullable=True)``.
     - ``probability``: ``Check.in_range(0, 1)``; ``positive``: ``Check.gt(0)``;
-      ``non_negative``: ``Check.ge(0)``; ``allowed_values``: ``Check.isin``.
+      ``non_negative``: ``Check.ge(0)``; ``allowed_values``: ``Check.isin``. The
+      probability and non-negative bounds allow ``BOUND_TOLERANCE`` for rounding.
     - ``unique_key``: ``DataFrameSchema(unique=keys)``, every duplicate reported.
     - ``required_if``: a frame-level check on the rows where the condition holds.
 
@@ -312,11 +239,15 @@ def to_pandera_schema(schema: Schema, context: str = "") -> pa.DataFrameSchema:
     for name, meta in schema.items():
         checks: list[pa.Check] = []
         if meta.get("probability"):
-            checks.append(_builtin("in_range")(0, 1, error=_MSG_PROBABILITY))
+            checks.append(
+                _builtin("in_range")(
+                    -BOUND_TOLERANCE, 1 + BOUND_TOLERANCE, error=_MSG_PROBABILITY
+                )
+            )
         if meta.get("positive"):
             checks.append(_builtin("gt")(0, error=_MSG_POSITIVE))
         if meta.get("non_negative"):
-            checks.append(_builtin("ge")(0, error=_MSG_NON_NEGATIVE))
+            checks.append(_builtin("ge")(-BOUND_TOLERANCE, error=_MSG_NON_NEGATIVE))
         if "allowed_values" in meta:
             checks.append(
                 _builtin("isin")(list(meta["allowed_values"]), error=_MSG_DISALLOWED)
@@ -429,7 +360,10 @@ def validate_from_schema(df: pd.DataFrame, schema: Schema, context: str) -> None
     Parameters
     ----------
     df : pandas.DataFrame
-        The table to check; not modified, nothing coerced.
+        The table to check; not modified, nothing coerced. A table whose row labels
+        repeat is checked on a renumbered copy: sample rows are named by their key
+        values, or, without key columns, by their position (``row 3``), not their
+        label.
     schema : Schema
         Column name to metadata.
     context : str
@@ -440,6 +374,9 @@ def validate_from_schema(df: pd.DataFrame, schema: Schema, context: str) -> None
     SchemaValidationError
         A ``ValueError`` listing every violation, with ``failure_cases`` attached.
     """
+    # Pandera cannot report failures over a repeated row label; check a renumbered view.
+    if not df.index.is_unique:
+        df = df.reset_index(drop=True)
     try:
         # inplace: no copy of a large table; with nothing coerced, df is not changed.
         to_pandera_schema(schema, context).validate(df, lazy=True, inplace=True)

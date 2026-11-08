@@ -19,7 +19,7 @@ filings.
 Owns
 ----
 The Yahoo chart endpoint and headers, the symbol convention, and the price, dividend and
-split source models and their columns.
+split source models, their columns and their table schemas.
 
 Must not
 --------
@@ -38,10 +38,16 @@ load_chart(tickers, *, provider, store, as_of)
     Snapshot and parse several symbols into one ``ChartTables``.
 yahoo_symbol(ticker)
     A ticker in Yahoo's convention (``BRK.B`` to ``BRK-B``).
+PRICE_SCHEMA, DIVIDEND_SCHEMA, SPLIT_SCHEMA
+    The schemas of the three tables, checked where they are written and read.
+PRICE_CURRENCY
+    The one currency the price tables may hold (USD).
+LISTING_COLUMNS, LISTING_SCHEMA
+    The columns and schema of the listings table, built from the monthly bars.
 
 Dependency rule
 ---------------
-pandas, the standard library and ``skatkis.io``.
+pandas, the standard library, ``skatkis.io`` and ``skatkis.pipelines``.
 """
 
 import json
@@ -56,6 +62,16 @@ import pandas as pd
 from Toolbox.skatkis.io.api import ApiClient
 from Toolbox.skatkis.io.provider import DataProvider, RawPayload
 from Toolbox.skatkis.io.snapshots import SnapshotStore, fetch_snapshot
+from Toolbox.skatkis.pipelines.contracts import Schema
+from Toolbox.skatkis.pipelines.schema import (
+    allowed_values,
+    from_dtypes,
+    identifier,
+    non_negative,
+    positive,
+    required,
+    unique_key,
+)
 
 CHART_URL = "https://query2.finance.yahoo.com/v8/finance/chart/{symbol}"
 USER_AGENT = "Mozilla/5.0 (compatible; trading-bot research)"
@@ -91,6 +107,59 @@ SPLIT_COLUMNS: dict[str, str] = {
     "denominator": "float64",
 }
 """Splits on their effective date: ``numerator`` new shares for ``denominator`` old."""
+
+PRICE_CURRENCY = "USD"
+"""The one currency the price tables may hold; every later stage reads prices as USD."""
+
+PRICE_SCHEMA: Schema = from_dtypes(
+    PRICE_COLUMNS,
+    {
+        "symbol": identifier | required | unique_key,
+        "date": required | unique_key,
+        "open": positive,
+        "high": positive,
+        "low": positive,
+        "close": positive,
+        "adj_close": positive,
+        "volume": non_negative,
+        "currency": required | allowed_values({PRICE_CURRENCY}),
+    },
+)
+"""The prices table: one row per symbol and day; a day without a trade has missing
+prices but never a price of 0 or below."""
+
+DIVIDEND_SCHEMA: Schema = from_dtypes(
+    DIVIDEND_COLUMNS,
+    {
+        "symbol": identifier | required | unique_key,
+        "ex_date": required | unique_key,
+        "amount": required | positive,
+        "currency": required | allowed_values({PRICE_CURRENCY}),
+    },
+)
+"""The dividends table: one cash dividend per symbol and ex-dividend date."""
+
+SPLIT_SCHEMA: Schema = from_dtypes(
+    SPLIT_COLUMNS,
+    {
+        "symbol": identifier | required | unique_key,
+        "date": required | unique_key,
+        "numerator": required | positive,
+        "denominator": required | positive,
+    },
+)
+"""The splits table: one split per symbol and date; a ratio part of 0 would corrupt every
+split factor after it."""
+
+LISTING_COLUMNS: dict[str, str] = {"symbol": "string", "first_date": "datetime64[ns]"}
+"""Each symbol's first monthly bar, no earlier than the monthly provider's start; built
+by the update from the monthly bars."""
+
+LISTING_SCHEMA: Schema = from_dtypes(
+    LISTING_COLUMNS,
+    {"symbol": identifier | required | unique_key, "first_date": required},
+)
+"""The listings table: one row per symbol."""
 
 
 class PriceParseError(ValueError):

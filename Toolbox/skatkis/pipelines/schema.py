@@ -7,8 +7,11 @@ ownership and layer contracts once a pipeline's sources are loaded.
 A schema is a dict keyed by canonical column name; each value is a metadata dict
 composed with ``|`` from the building blocks below (``type_float | required |
 non_negative``). A tool declares one ``PipelineSchema`` (every input and, per layer,
-every output) and one ``SourceSchema`` per stored table; ``bind`` checks them against
-each other and raises once with every problem found.
+every output). A stored table has a plain schema in the source module that produces it,
+built with ``from_dtypes`` from that module's dtype map. ``SourceSchema``, ``Grain``,
+``Ownership`` and ``bind``, which check source schemas against a pipeline's and raise
+once with every problem found, are not used yet: they are kept for the pipeline nodes
+and their layer contracts.
 
 Owns
 ----
@@ -24,8 +27,12 @@ Public API
 ----------
 type_*, required, positive, probability, non_negative, unique_key, identifier, expect_*
     Column tags, composed with ``|``.
+BOUND_TOLERANCE
+    The rounding slack on the ``probability`` and ``non_negative`` bounds.
 allowed_values(values), required_if(column, value), owned_by(layer), computable_from(*columns)
     Tags that take an argument.
+from_dtypes(dtypes, tags)
+    A schema from a module's column-to-dtype map and the tags of some columns.
 Grain(name, key)
     The key columns a source is keyed on; empty means broadcast.
 PipelineSchema(inputs, layers, segmentation_source)
@@ -68,7 +75,8 @@ positive = {"positive": True}
 probability = {"probability": True}
 unique_key = {"unique_key": True}
 identifier = {"identifier": True}
-"""String key whose case is kept when cast (other strings are lower-cased)."""
+"""Marks a string key whose case is significant (``BRK.B``, an XBRL tag); nothing reads
+it yet, since no step casts or changes the case of strings."""
 non_negative = {"non_negative": True}
 
 # Soft validation flags: reported after the run, never raised.
@@ -80,6 +88,14 @@ expect_probability = {"expect_probability": True}
 # Default shorthands.
 default_zero = {"default": 0.0}
 default_nan = {"default": np.nan}
+
+BOUND_TOLERANCE = 1e-12
+"""Absolute slack on the ``probability`` and ``non_negative`` bounds, for rounding.
+
+A share computed as a ratio can land one rounding step outside its bound (1 + 2.2e-16
+for a company with full points on every rule). ``positive`` has no slack: it exists to
+reject zero. Validation and the soft expectations both read it from here.
+"""
 
 # Dtype shorthands.
 type_str = {"dtype": "str"}
@@ -97,6 +113,26 @@ def allowed_values(values: set[Any]) -> ColumnMeta:
 def required_if(column: str, value: object) -> ColumnMeta:
     """Flag a column that is required only on rows where ``df[column] == value``."""
     return {"required_if": (column, value)}
+
+
+def from_dtypes(dtypes: Mapping[str, str], tags: Mapping[str, ColumnMeta]) -> Schema:
+    """
+    Return a schema from a column-to-dtype map and the tags of some of its columns.
+
+    A source module keeps one map of its columns and dtypes (what it casts to); this
+    adds the constraint tags without restating a dtype, in the map's column order.
+
+    Raises
+    ------
+    ValueError
+        If ``tags`` names a column the dtype map does not declare.
+    """
+    unknown = sorted(set(tags) - set(dtypes))
+    if unknown:
+        raise ValueError(f"from_dtypes: tags for undeclared columns: {unknown}")
+    return {
+        col: {"dtype": dtype} | dict(tags.get(col, {})) for col, dtype in dtypes.items()
+    }
 
 
 DERIVABLE_FROM_KEY: str = "derivable_from"
