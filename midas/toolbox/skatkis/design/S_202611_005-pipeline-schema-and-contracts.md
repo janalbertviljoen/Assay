@@ -7,20 +7,24 @@ Target structure for the first slice. Decisions and history are in the
 
 ```text
 Toolbox/skatkis/pipelines/
-├── schema.py        vocabulary, Grain, PipelineSchema, SourceSchema, ownership, bind
-├── contracts.py     LayerContract, safe_merge
-├── validation.py    assert_* functions; schema-driven validation on Pandera
-├── report.py        Notice, PipelineReport
-└── report_checks.py generic checks over sources (as the template, if used)
-Toolbox/market_data/schema.py        SourceSchema per cleaned table
+├── schema.py        vocabulary, from_dtypes, BOUND_TOLERANCE, Grain, PipelineSchema,
+│                    SourceSchema, ownership, bind (the last three for phase 3)
+├── contracts.py     ColumnMeta, Schema, LayerContract, safe_merge
+├── validation.py    assert_exact_columns, assert_required_columns; validate_from_schema
+│                    on Pandera
+└── report.py        Notice, PipelineReport, the soft-expectation scan
+Toolbox/market_data/sources/*.py     the schema of each source's tables (PRICE_SCHEMA, ...)
+Toolbox/market_data/update.py        TABLE_SCHEMAS (every stored table), the gated writes
+Toolbox/market_data/validation.py    check_table, the stored-table gate
 Toolbox/value_investing/schema.py    PipelineSchema: inputs and layer outputs
-Toolbox/value_investing/contracts.py LayerContract per layer
-tests/skatkis/pipelines/             mirrors the above
+Toolbox/value_investing/validation.py check_buyability, the output gate
+tests/                               mirrors the above
 ```
 
-`sources.py` (`LookupModel`, `ColumnMap`) is ported only if a `market_data` table needs
-a column map; the cleaned tables are already on canonical names, so phase 2 may need
-`SourceSchema` and `bind` alone. Decide when phase 2 starts.
+`sources.py` (`LookupModel`, `ColumnMap`), `report_checks.py` and `utils.py` are not
+ported: the stored tables are already on canonical names and typed, so no column map or
+casting is needed. The template's `bind` does not fit the stored tables (change file,
+Decisions, "phase 2 amended").
 
 ## From the template, and what changes
 
@@ -56,8 +60,13 @@ not yet split, so contracts are declared but not enforced between layers.
    `utils.py` is not ported: its flag accessors are private helpers in `validation.py`,
    and `cast_and_fill` waits until a source needs casting.
 3. Declare the `value_investing` schema and assert the `buyability` output against it
-   in `pipeline.py`'s caller (`__main__`), not inside the calculation.
-4. Declare the `market_data` `SourceSchema`s and bind them in the update and check
-   commands.
-5. Black, ruff, pyright, `regression_check`; compare the buyability tables.
+   with the output gate (`value_investing.validation.check_buyability`), run at the end
+   of `pipeline.buyability` so every caller is gated.
+4. Declare the schema of each stored table in its source module, list them in
+   `market_data.update.TABLE_SCHEMAS`, and gate them with `check_table`: per company
+   and per symbol inside the update loops (a failure goes to `UpdateResult.failed`),
+   then all combined tables before any is written (`_write_all`), and on every stored
+   table `value_investing` reads (`_read`).
+5. Black, ruff, pyright, `regression_check`; compare the buyability tables; exercise
+   the gates on corrupted tables and the write path offline.
 6. Inspector at the milestone; Warden before the pull request; Scribe; Tester.

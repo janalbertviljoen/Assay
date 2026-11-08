@@ -104,3 +104,29 @@ mismatch" rule in `.claude/rules/sources.md`, so it is the user's decision.
 931 daily total-return moves above 20% across 409 symbols since 2006; plausible (earnings
 and 2008/2020), but not yet inspected for data errors such as unadjusted splits.
 
+
+### Facts filed before their period ends (2026-11-08, open)
+
+303 facts in the 2026-10-31 table have `filed` before `period_end`, by 1 to 1,384 days
+(median 52): mostly `dividends_per_share` (a dividend declared ahead of its period) and
+the `dei` `shares_outstanding` of a cover page, some balance-sheet fields in 10-Qs and an
+`eps_basic` in an AES 10-Q (period 2025-09-30, filed 2025-05-01), which looks like a
+tagging error. No look-ahead: point-in-time alignment uses `filed`, when the value was
+public. Not a schema rule, since the legitimate cases would fail it (found while
+declaring the stored-table schemas, S_202611_005). Worth checking whether a fact whose
+period ends after the rebalance date can be picked as the latest fiscal year.
+
+### Prices with no close (2026-11-08, open)
+
+23 rows of the 2026-10-31 prices table have every price missing (ACA from 2026-10-23,
+for example): days without a trade keep their row, as `PRICE_COLUMNS` says. The
+schema allows it; `price_on` takes the last price on or before a date within
+`PRICE_TOLERANCE_DAYS`.
+
+### Reads without the stored-table gate (2026-11-08, open → S_202611_005 phase 3)
+
+The `check` command (`market_data/checks.py`) and `market_data/__main__.py` read the
+stored tables without `check_table`; `checks.py` also counts duplicate (symbol, date)
+rows and closes of 0 or below itself, which `PRICE_SCHEMA` now rejects. Callers that pass
+their own tables to `value_investing.pipeline.buyability` (the MCP tools, notebooks) get
+the output gate but no input gate. Raised by the Warden; decide in phase 3.

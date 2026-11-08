@@ -16,7 +16,7 @@ repository setup. Prefix `S`. Naming and workflow: `midas/instructions/secretary
 | [S_202611_002](changes/S_202611_002-midas-investor-hat.md) | Midas, the investor hat, with a Graham reference and the starting investor profile | new capability | agreed | medium | S_202610_002 |
 | [S_202610_008](changes/S_202610_008-midas-wrath-scenario-testing.md) | Midas's wrath: scenario testing of a model (survivorship experiment and input tests; market scenarios later) | new capability | agreed | high | MD_202610_004 |
 | [S_202611_003](changes/S_202611_003-calibration-infrastructure.md) | Calibration infrastructure: pipeline nodes, cache, studies and searchers | new capability | agreed | high | none |
-| [S_202611_005](changes/S_202611_005-pipeline-schema-and-contracts.md) | Pipeline schema, contracts and validation (from the enterprise template), and value_investing on them | refactor | agreed | high | none |
+| [S_202611_005](changes/S_202611_005-pipeline-schema-and-contracts.md) | Pipeline schema, contracts and validation (from the enterprise template), and value_investing on them | refactor | in progress | high | none |
 
 ## Done
 
