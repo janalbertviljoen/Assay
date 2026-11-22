@@ -95,8 +95,8 @@ INPUT_TABLES: dict[str, Schema] = {
 against when read; the schemas are owned by the ``market_data`` source modules."""
 
 REPORT_TABLES: dict[str, Schema] = {"observations": OBSERVATION_SCHEMA}
-"""Stored tables only the reports read (the exchange rate of the buy list,
-VI_202611_003), checked against their schema like ``INPUT_TABLES``; kept apart so the
+"""Stored tables only the reports read (the exchange rate of the buy list),
+checked against their schema like ``INPUT_TABLES``; kept apart so the
 pipeline's inputs stay exactly what it reads."""
 
 # A rule's flag: 1 passed, 0 failed, missing when not evaluable (value_investing.flags).

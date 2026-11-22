@@ -58,7 +58,8 @@ class PersonalReport:
 
 def _rand(value: float) -> str:
     """Return ``value`` as whole rand with thousands separators, the sign first."""
-    return f"-R{-value:,.0f}" if value < 0 else f"R{value:,.0f}"
+    rounded = round(value)
+    return f"-R{-rounded:,.0f}" if rounded < 0 else f"R{rounded:,.0f}"
 
 
 def personal_facts(inputs: PersonalReport) -> dict[str, str]:
@@ -127,15 +128,19 @@ def _saving_facts(inputs: PersonalReport) -> dict[str, str]:
     person = inputs.finances.person
     if person is not None and person.phases:
         steps = [f"{p.growth:.0%} until {p.until_age}" for p in person.phases]
-        facts["phases"] = ", ".join(steps[:-1]) + " and " + steps[-1]
+        facts["phases"] = (
+            ", ".join(steps[:-1]) + " and " + steps[-1] if len(steps) > 1 else steps[0]
+        )
     for account in inputs.finances.accounts:
         if account.kind == "retirement" and account.growth > 0:
-            grown = projection.savings_projection(account, holding.years)
+            grown = projection.savings_projection(account, holding.years, person)
             facts["retirement_growth"] = f"{account.growth:.0%}"
             facts["retirement_monthly"] = _rand(account.monthly)
             facts["retirement_escalation"] = f"{account.escalation:.1%}"
             for j, horizon in enumerate(holding.horizons, start=1):
                 end = grown[grown["year"] == float(horizon)]
+                if end.empty:  # a horizon beyond the projection's years is skipped
+                    continue
                 facts[f"horizon_{j}"] = str(horizon)
                 facts[f"retirement_h{j}"] = _rand(float(end["value"].iloc[0]))
     if person is not None:
@@ -244,7 +249,10 @@ def _projection_table(inputs: PersonalReport) -> Table:
     for name, growth in holding.growth.items():
         table = projection.property_projection(holding, growth)
         for horizon in holding.horizons:
-            r = table[table["year"] == float(horizon)].iloc[0].to_dict()
+            found = table[table["year"] == float(horizon)]
+            if found.empty:  # a horizon beyond the projection's years is skipped
+                continue
+            r = found.iloc[0].to_dict()
             rows.append(
                 [
                     f"In {horizon} years",

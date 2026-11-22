@@ -53,8 +53,9 @@ money-weighted return, internal rate of return, IRR : money_weighted_return
     The rate r with Σ c_k (1 + r)^((T - t_k) / 365.25) = V, c_k the contributions at
     t_k, V the value at T; found by bisection between -99% and +1000% a year.
 moving average, drawdown from high, place in range, price slope : price_trend
-    M(t) = mean of the last n prices; H(t) = max of the last h prices; P / H - 1 and
-    P / M - 1; (P - L) / (U - L) with L and U the min and max of the last r prices;
+    M(t) = mean of the last n prices (missing before n); H(t) = max of the last h
+    prices; P / H - 1 and P / M - 1; (P - L) / (U - L) with L and U the min and max of
+    the last r prices (H, L and U over the prices so far while fewer than h or r);
     slope(t) = 252 * (E(t) - E(t-1)), per year, with E the exponential mean of ln P:
     E(0) = ln P(0), E(t) = a ln P(t) + (1 - a) E(t-1), a = 2 / (s + 1).
 loan amortisation, bond balance, outstanding loan : amortise
@@ -270,6 +271,13 @@ def price_trend(
     -----
     Each value uses prices up to its own date only. The slope counts trading days, not
     calendar days, so a gap in the dates is read as one day.
+
+    The high and the range take partial windows at the start: until ``high_days`` or
+    ``range_days`` prices exist they cover the prices so far. A company with less than
+    ``range_days`` of history (five years at 1260) therefore gets a shorter range, and
+    its first price has ``from_high`` = 0 and a missing ``in_range`` (L = U). Only the
+    trend mean waits for a full window. Prices that are zero, negative or missing are
+    dropped before any measure is taken, so the windows count positive prices only.
     """
     levels = prices[prices > 0]
     smoothed = levels.map(math.log).ewm(span=smooth_days, adjust=False).mean()

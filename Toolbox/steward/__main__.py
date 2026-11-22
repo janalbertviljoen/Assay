@@ -9,10 +9,11 @@ Run from the repository root, after the value tool has scored the as-of date::
     .venv/bin/python -m Toolbox.steward report --as-of 2026-11-19
 
 It reads the private finances (``data/private/steward/finances.toml``), the value tool's
-picks and buy list for the index (``value_investing.__main__.buy_report_inputs``), builds
-the figures and the LaTeX in a temporary folder, and keeps only
+picks and buy list for the index (``value_investing.io.buy_report_inputs``, with the
+private amounts), builds the figures and the LaTeX in a temporary folder under that
+private folder, and keeps only
 ``data/private/steward/reports/<as_of>/personal_report.pdf``. Nothing is written to the
-tracked ``results/`` (S_202611_006).
+tracked ``results/``.
 
 Owns
 ----

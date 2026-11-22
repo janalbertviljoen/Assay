@@ -40,7 +40,7 @@ retirement_table(finances, usd_rate)
     Each part of the net worth today and at retirement, per property scenario.
 tfsa_full_after(tfsa, monthly)
     The years until the tax-free account's lifetime limit is reached.
-company_portfolio(holding, scenario, years)
+company_portfolio(holding, scenario, years, person=None)
     The property company's share portfolio, built from its profit once the bond is repaid.
 loss_used_after(holding, scenario, years)
     The years until the company's assessed loss is used up (NaN if not within ``years``).
@@ -63,7 +63,8 @@ reinvested rental profit, company portfolio, assessed loss : company_portfolio
     nothing invested; a loss adds to the assessed loss, a profit uses it. From the
     month the bond is repaid: profit = rent (1 + g_r)^t - costs (1 + g_c)^t, t in years
     since; tax-free while the assessed loss lasts, then taxed at the company rate;
-    P(m) = P(m-1) (1 + g_p)^(1/12) + profit after tax.
+    P(m) = P(m-1) (1 + g_p)^(1/12) + profit after tax, g_p the phase growth of the
+    month's year for a phased portfolio (else its own growth).
 extra bond repayment : monthly_cash_flow
     extra = paid by the founder - (instalment + levies + rates); into the bond =
     instalment + extra.
@@ -227,10 +228,31 @@ def savings_projection(
 ) -> pd.DataFrame:
     """Return a savings account's value at the end of each year 0..``years``.
 
-    The value grows at ``account.growth`` a year, or for a ``phased`` account at the
-    ``person``'s risk phase of each year, compounded monthly, and receives
-    ``account.monthly`` at the end of each month, raised by ``account.escalation`` at
-    the start of each later year. Columns ``year`` and ``value``.
+    Parameters
+    ----------
+    account : Account
+        The account: ``value`` today, ``monthly`` contribution, ``growth``,
+        ``escalation``, ``raises`` and ``phased`` (``steward.finances.Account``).
+    years : int
+        Years projected; 0 gives the value today only.
+    person : Person | None
+        The founder, whose risk phases set the growth of a ``phased`` account; without
+        it a phased account grows at ``account.growth``.
+
+    Returns
+    -------
+    pd.DataFrame
+        Columns ``year`` (0..``years``, float) and ``value`` (the account's currency).
+
+    Notes
+    -----
+    Month by month: V(m) = V(m-1) (1 + g)^(1/12) + c (1 + e)^y Π(1 + r_k), with y the
+    whole years elapsed (0 in the first twelve months), e the ``escalation``, r_k the
+    one-off ``raises`` of years k <= y (a raise keyed to year k applies from the start
+    of that year onwards, and compounds with the escalation) and g the growth of year
+    y: ``person.growth_in_year(y, account.growth)`` for a phased account, the first
+    phase whose ``until_age`` is above the age then, else ``account.growth``. The
+    contribution is paid at the end of each month, after growth.
     """
     value = account.value
     rows = [{"year": 0.0, "value": value}]
@@ -367,8 +389,32 @@ def company_portfolio(
     Nothing is invested while the bond is being repaid (at ``bond_payment`` a month, no
     draws); from the month after, the profit (``after_bond`` rent less costs, each grown
     from that month) goes into a portfolio growing at ``portfolio_growth``. The assessed
-    loss is carried month by month (``_company_months``). Columns ``year`` and
-    ``value``; all zero when ``after_bond`` is missing.
+    loss is carried month by month (``_company_months``).
+
+    Parameters
+    ----------
+    holding : Property
+        The property company, with its ``after_bond`` plan.
+    scenario : str
+        A growth scenario: a key of ``after_bond.rent_growth``.
+    years : int
+        Years projected.
+    person : Person | None
+        The founder; with a ``phased`` portfolio its growth follows the founder's risk
+        phases (``Person.growth_in_year``), counted in years from today, not from the
+        repayment. Without it the portfolio grows at ``portfolio_growth``.
+
+    Returns
+    -------
+    pd.DataFrame
+        Columns ``year`` (0..``years``) and ``value`` (ZAR, 0 in year 0); all zero
+        when ``after_bond`` is missing or the bond is not repaid within ``years``.
+
+    Raises
+    ------
+    KeyError
+        When ``scenario`` is not in ``after_bond.rent_growth`` and the bond is repaid
+        within ``years``.
     """
     rows = [{"year": 0.0, "value": 0.0}]
     for month, value, _ in _company_months(holding, scenario, years, person):
@@ -378,11 +424,23 @@ def company_portfolio(
 
 
 def loss_used_after(holding: Property, scenario: str, years: int) -> float:
-    """Return the years until the assessed loss is used up (NaN if not within ``years``)."""
+    """Return the years until the assessed loss is used up (NaN if not within ``years``).
+
+    The month the remaining loss (``_company_months``, which also adds the losses of
+    the bond months) first falls to 0 after being positive, divided by 12; 0 when there
+    never is a loss to use (no ``after_bond``, or no loss at the start nor from the bond
+    months); NaN when some loss is still left after ``years``. The loss does not depend
+    on the founder's phases, so no ``person`` is needed.
+    """
+    if holding.after_bond is None:
+        return 0.0
+    seen = holding.after_bond.assessed_loss > 0
     for month, _, loss in _company_months(holding, scenario, years):
-        if loss <= 0:
+        if loss > 0:
+            seen = True
+        elif seen:
             return month / 12
-    return float("nan")
+    return float("nan") if seen else 0.0
 
 
 def _company_months(
@@ -390,10 +448,19 @@ def _company_months(
 ) -> list[tuple[int, float, float]]:
     """Return, per month, the company's share portfolio and its remaining assessed loss.
 
-    While the bond runs the taxable result is ``rent_paid`` less the month's interest,
-    levies and rates; a loss adds to the assessed loss and a profit uses it up (nothing
-    is invested: the cash goes to the bond). After the bond, the letting profit is
-    tax-free while the loss lasts, then taxed at ``company_tax``, and is invested.
+    One ``(month, portfolio value, assessed loss)`` per month 1..12 ``years`` (ZAR).
+    The bond follows ``amortise`` at ``bond_payment``; the month it reaches 0 still
+    counts as a bond month. While the bond runs the taxable result is ``rent_paid``
+    (0 when not given) less the month's interest, levies and rates; a loss adds to the
+    assessed loss and a profit uses it up, the loss never below 0 (nothing is invested
+    and no tax is charged: the cash goes to the bond). After the bond, the letting
+    profit (``after_bond.rent`` grown at the scenario's ``rent_growth`` less
+    ``expenses`` grown at ``expense_growth``, from the first month after the bond) is
+    tax-free up to the remaining loss, the rest taxed at ``company_tax``; a monthly loss
+    is invested as it is (lowering the portfolio) and does not add to the assessed
+    loss. The portfolio grows monthly at ``portfolio_growth`` or, when ``phased`` and a
+    ``person`` is given, at the person's phase growth of the month's year from today.
+    Without ``after_bond`` every month is ``(m, 0, 0)``.
     """
     after = holding.after_bond
     if after is None:

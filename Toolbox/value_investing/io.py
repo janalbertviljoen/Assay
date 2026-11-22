@@ -31,7 +31,7 @@ read_report_table(folder, name)
     A stored table only the reports read, checked against ``REPORT_TABLES``.
 company_names(path)
     Each company's full name by price symbol.
-buy_report_inputs(*, as_of, rules, index, data_dir, indices, report_text, folder)
+buy_report_inputs(*, as_of, rules, index, data_dir, indices, report_text, folder, amounts)
     The short buy report's inputs, its figures saved in ``folder``.
 assemble_buy_list(prices, upcoming, end, settings, folder, rates)
     The buy list with each company's trend and the saved trend figure.
@@ -80,7 +80,32 @@ class StoredIndex:
 def stored_index(
     key: str, as_of_date: date, data_dir: Path, indices: Path
 ) -> StoredIndex:
-    """Return the entry ``key`` of ``indices`` and its folders for ``as_of_date``."""
+    """Return the entry ``key`` of ``indices`` and its folders for ``as_of_date``.
+
+    Parameters
+    ----------
+    key : str
+        The index's table in ``indices``, e.g. ``sp500``.
+    as_of_date : date
+        The as-of date of the stored tables.
+    data_dir : Path
+        The data folder; the tables are under ``data_dir / "interim"``.
+    indices : Path
+        ``config/indices.toml``.
+
+    Returns
+    -------
+    StoredIndex
+        ``tables`` = ``interim/value_investing/<as_of>/<key>``, ``members`` =
+        ``interim/constituents/<as_of>/<key>``; ``buy_list`` is False when the entry
+        does not set it. The folders are not checked to exist.
+
+    Raises
+    ------
+    KeyError
+        When ``key`` or one of its ``label``, ``benchmark``, ``benchmark_name`` and
+        ``membership`` is missing from ``indices``.
+    """
     entry = load_config(indices)[key]
     as_of = as_of_date.isoformat()
     interim = data_dir / "interim"
@@ -110,11 +135,48 @@ def buy_report_inputs(  # noqa: PLR0913  one keyword per input the command reads
 ) -> report.BuyReport:
     """Read the stored tables of ``as_of`` and return what the buy report shows.
 
-    The figures (the next picks' price history and the price trends) are saved in
-    ``folder``. ``amounts`` replaces the investor's ``currency``, ``picks_amount`` and
-    ``fixed`` of ``[report.buy_list]`` (kept private by ``steward``); the analysis
-    settings always come from ``rules``. Used by the ``buy`` command and by
-    ``steward``'s personal report.
+    Used by the ``buy`` command and by ``steward``'s personal report. Reads the first
+    universe view's buyability table, the Yahoo prices, the FRED observations and the
+    constituents of ``index``; the end date is the benchmark's last price date.
+
+    Parameters
+    ----------
+    as_of : date
+        The as-of date of the stored tables.
+    rules : dict[str, Any]
+        ``config/rules.toml`` (``[universe]``, ``[wallet]``, ``[ledger]``,
+        ``[report]`` and ``[report.buy_list]``).
+    index : str
+        The index's key in ``indices``. Its ``buy_list`` flag is not read here: the
+        buy report always shows the buy list.
+    data_dir : Path
+        The data folder (``data``).
+    indices : Path
+        ``config/indices.toml``.
+    report_text : Path
+        The report text (``config/report_value_investing.toml``); only its
+        ``[sectors]`` are read here.
+    folder : Path
+        Where the figures are saved: ``next_prices.png`` and ``trends.png``.
+    amounts : Mapping[str, Any] | None
+        The investor's ``currency``, ``picks_amount`` and ``fixed``, replacing those
+        of ``[report.buy_list]`` (``rules.toml`` holds a neutral default in USD with
+        nothing fixed; ``steward`` passes the private amounts). Any other key given
+        replaces the setting of the same name too. ``None`` keeps ``rules``.
+
+    Returns
+    -------
+    report.BuyReport
+        The buy list with the trend states and figure, the next picks, the company
+        names, the index label, the sector names and the price-history figure.
+
+    Raises
+    ------
+    KeyError
+        When ``index`` or a setting is missing.
+    FileNotFoundError
+        When a stored table is missing, including the FRED observations, which are
+        read only when the buy list's currency is not USD.
     """
     entry = stored_index(index, as_of, data_dir, indices)
     settings = {**rules["report"]["buy_list"], **(amounts or {})}
@@ -133,8 +195,12 @@ def _buy_report_inputs(
     view = str(rules["universe"]["views"][0])
     table = read_table(index.tables / f"buyability_{view}.parquet")
     prices = read_input(index.interim / "yahoo" / as_of, "prices")
-    rates = read_report_table(index.interim / "fred" / as_of, "observations")
     settings = rules["report"]
+    rates = (
+        read_report_table(index.interim / "fred" / as_of, "observations")
+        if settings["buy_list"]["currency"] != "USD"
+        else None
+    )
     end = pd.Timestamp(prices[prices["symbol"] == index.benchmark]["date"].max())
     model = buying.report_wallet(rules)
     upcoming, _ = buying.next_picks(table, end, model, str(settings["share_column"]))
@@ -169,17 +235,44 @@ def assemble_buy_list(  # noqa: PLR0913, PLR0917  one argument per table the lis
     end: pd.Timestamp,
     settings: dict[str, Any],
     folder: Path,
-    rates: pd.DataFrame,
+    rates: pd.DataFrame | None,
 ) -> report.BuyList:
     """Return the buy list with each company's trend state and the saved trend figure.
 
-    The money is in ``settings["currency"]``, turned into USD at the latest value of
-    the rate series ``settings["fx_series"]`` on or before ``end`` (1 for USD); the
-    returned settings carry that rate and its date for the text. The figure is saved in
-    ``folder``.
+    Parameters
+    ----------
+    prices : pd.DataFrame
+        Daily prices (``symbol``, ``date``, ``close``).
+    upcoming : pd.DataFrame
+        The next picks (``buying.next_picks``).
+    end : pd.Timestamp
+        The decision date; later prices and rates are not used.
+    settings : dict[str, Any]
+        ``[report.buy_list]`` with the investor's amounts (``buying.prepare_buy_list``)
+        and the figure's ``years``, ``slope_years`` and ``slide``.
+    folder : Path
+        Where ``trends.png`` is saved.
+    rates : pd.DataFrame or None
+        FRED observations; needed, and used, only when the currency is not USD.
+
+    Returns
+    -------
+    report.BuyList
+        The orders, the trend states, ``settings`` with ``rate`` (units of the
+        currency per USD, 1 for USD) and ``rate_date`` (the rate's date, ``end`` for
+        USD), and the figure's path.
+
+    Raises
+    ------
+    IndexError
+        When ``settings["fx_series"]`` has no value on or before ``end``
+        (``buying.latest_rate``), or a company has too short a history
+        (``buying.prepare_buy_list``).
     """
     rate, rate_date = 1.0, end
     if settings["currency"] != "USD":
+        if rates is None:
+            raise ValueError(f"a {settings['currency']} buy list needs the FRED rates")
         rate, rate_date = buying.latest_rate(rates, str(settings["fx_series"]), end)
     orders, states, trends = buying.prepare_buy_list(
         prices, upcoming, end, settings, rate
@@ -201,21 +294,63 @@ def assemble_buy_list(  # noqa: PLR0913, PLR0917  one argument per table the lis
 
 
 def read_input(folder: Path, name: str) -> pd.DataFrame:
-    """Read the stored table ``name`` from ``folder`` and check it against its schema."""
+    """Read the stored table ``name`` from ``folder`` and check it against its schema.
+
+    Parameters
+    ----------
+    folder : Path
+        The folder holding ``<name>.parquet``.
+    name : str
+        A key of ``value_investing.schema.INPUT_TABLES`` (``prices``, ``facts``, ...).
+
+    Returns
+    -------
+    pd.DataFrame
+        The table as stored, unchanged by the check.
+
+    Raises
+    ------
+    KeyError
+        When ``name`` is not in ``INPUT_TABLES``.
+    FileNotFoundError
+        When the file is missing.
+    ValueError
+        When the table breaks its schema (``market_data.validation.check_table``: a
+        missing or undeclared column, or a broken constraint).
+    """
     table = read_table(folder / f"{name}.parquet")
     check_table(table, INPUT_TABLES[name], f"{folder}/{name}")
     return table
 
 
 def read_report_table(folder: Path, name: str) -> pd.DataFrame:
-    """Read a stored table only the reports read and check it against its schema."""
+    """Read a stored table only the reports read and check it against its schema.
+
+    As ``read_input``, with ``name`` a key of ``value_investing.schema.REPORT_TABLES``
+    (``observations``: the FRED exchange rates of the buy list). Kept apart so the
+    pipeline's inputs stay exactly what it reads.
+    """
     table = read_table(folder / f"{name}.parquet")
     check_table(table, REPORT_TABLES[name], f"{folder}/{name}")
     return table
 
 
 def company_names(path: Path) -> dict[str, str]:
-    """Return each company's full name by price symbol, from the constituents table."""
+    """Return each company's full name by price symbol, from the constituents table.
+
+    Parameters
+    ----------
+    path : Path
+        The constituents table, ``<folder>/constituents.parquet``; read through
+        ``read_input``, so it is checked against its schema.
+
+    Returns
+    -------
+    dict[str, str]
+        ``security`` by Yahoo symbol (``market_data.sources.prices.yahoo_symbol``,
+        e.g. ``BRK.B`` becomes ``BRK-B``). Companies outside today's list, such as the
+        fixed purchases, have no entry.
+    """
     constituents = read_input(path.parent, path.stem)
     return {
         yahoo_symbol(str(symbol)): str(name)

@@ -18,8 +18,9 @@ as the minimum (user, 2026-11-01).
 Code is imported from the root as `Toolbox.<package>`: `skatkis` (shared
 infrastructure, general finance, the backtest engine, Midas's server), `market_data`
 (sources, cleaned tables, shared metrics), `value_investing` (the rule-based tool),
-`hand_o_midas` (the machine-learning tool) and `SandBox` (exploratory, outside the
-standard). The full layout is in [developer.md](developer.md).
+`hand_o_midas` (the machine-learning tool), `steward` (the founder's private finances
+and personal report, on `value_investing`; its data only in the git-ignored
+`data/private/`) and `SandBox` (exploratory, outside the standard). The full layout is in [developer.md](developer.md).
 
 ## The hats
 

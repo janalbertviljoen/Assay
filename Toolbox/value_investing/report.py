@@ -113,11 +113,13 @@ class Peers:
 
 @dataclass(frozen=True)
 class BuyList:
-    """The personal buy list (VI_202611_003) with the trend of each company in it.
+    """The personal buy list with the trend of each company in it.
 
     ``orders`` is ``value_investing.buy_list.buy_list`` output, ``states`` its
-    ``trend_states``; ``settings`` is ``[report.buy_list]`` of ``config/rules.toml`` with
-    the ``rate`` and ``rate_date`` the list used; ``figure`` the saved trend figure.
+    ``trend_states``; ``settings`` is ``[report.buy_list]`` of ``config/rules.toml``,
+    with the investor's amounts when they were given
+    (``value_investing.io.buy_report_inputs``), and the ``rate`` and ``rate_date`` the
+    list used; ``figure`` the saved trend figure.
     """
 
     orders: pd.DataFrame
@@ -802,8 +804,32 @@ def build_buy_report(
 ) -> Path:
     """Write the short buy report's LaTeX into ``folder`` and return its path.
 
-    The next picks, the buy list and the trend of each company in it
-    (``[buy_report]`` and ``[buy_list]`` of the report text); no backtest.
+    The next picks, the buy list and the trend of each company in it; no backtest and
+    no table of contents.
+
+    Parameters
+    ----------
+    inputs : BuyReport
+        What the report shows (``value_investing.io.buy_report_inputs``).
+    text : Mapping[str, Any]
+        The report text (``config/report_value_investing.toml``): ``[buy_report]``
+        ``title`` and ``abstract``, and what ``buy_report_sections`` reads.
+    folder : Path
+        Where ``buy_report.tex`` is written; the figures it places are referred to by
+        their own paths.
+    subtitle : str
+        The line under the title, e.g. the index and the as-of date.
+
+    Returns
+    -------
+    Path
+        ``folder / "buy_report.tex"``. Compiling it to PDF is the caller's.
+
+    Raises
+    ------
+    KeyError
+        When a text entry is missing or names a placeholder ``buy_report_sections``
+        does not fill.
     """
     sections, facts = buy_report_sections(inputs, text)
     spec = text["buy_report"]
@@ -826,7 +852,31 @@ def buy_report_sections(
 ) -> tuple[list[Section], dict[str, str]]:
     """Return the short buy report's sections and the facts its text fills in.
 
-    The next picks with their price history, then the buy list and the price trends.
+    Parameters
+    ----------
+    inputs : BuyReport
+        What the report shows.
+    text : Mapping[str, Any]
+        The report text: ``[buy_report]`` ``picks_title``, ``picks_text`` and
+        ``picks_caption``, ``[next] prices_figure``, and ``[buy_list]``.
+
+    Returns
+    -------
+    tuple[list[Section], dict[str, str]]
+        Two sections: the next picks (table ``tab:next`` and figure
+        ``fig:next-prices``), then the buy list (table ``tab:buy-list``) with the price
+        trends as its sub-section (table ``tab:trends``, figure ``fig:trends``). The
+        facts are the placeholder values: ``index``, ``picks``, ``pick_years``,
+        ``pick_scenario``, ``next_score_date``, ``next_picks`` and the buy list's
+        (amounts in the investor's currency, the trend windows, the rate).
+
+    Raises
+    ------
+    IndexError
+        When ``inputs.next_picks`` is empty (the score date is read from its first
+        row).
+    KeyError
+        When a text entry is missing or names a placeholder not in the facts.
     """
     picks = inputs.next_picks
     facts = {
@@ -1245,20 +1295,26 @@ def _buy_list_facts(buy: BuyList | None, names: Mapping[str, str]) -> dict[str, 
         "range_years": f"{int(settings['range_days']) / TRADING_DAYS_PER_YEAR:.0f}",
         "currency": currency,
         "ramp_ratio": f"{first / last:g}",
+        "high_period": _period(
+            int(settings["high_days"]), TRADING_DAYS_PER_YEAR, "the past year"
+        ),
+        "lag_period": _period(
+            int(settings["lag_days"]), 21, "a month ago", suffix=" ago"
+        ),
         "blend_parts": (
-            f"{rank_part:g} parts rank to {dip_part:g} "
+            f"{rank_part:g} part{'s' if rank_part != 1 else ''} rank to {dip_part:g} "
             f"part{'s' if dip_part != 1 else ''} dip"
         ),
         "buy_total": f"{float(orders['score_amount'].sum()):,.0f}",
         "picks_amount": f"{float(picks['score_amount'].sum()):,.0f}",
         "own_added": (
             f", with {own_picks} added as the investor's own choice"
-            if own_picks
+            if not own.empty
             else ""
         ),
         "own_clause": (
             f", and {own_picks}, the investor's own choice outside the model"
-            if own_picks
+            if not own.empty
             else ""
         ),
         "rate_clause": (
@@ -1268,6 +1324,14 @@ def _buy_list_facts(buy: BuyList | None, names: Mapping[str, str]) -> dict[str, 
             else "The money buys"
         ),
     }
+
+
+def _period(days: int, usual: int, words: str, *, suffix: str = "") -> str:
+    """Return ``words`` for the usual window, else the window in trading days."""
+    if days == usual:
+        return words
+    prefix = "" if suffix else "the last "
+    return f"{prefix}{days} trading days{suffix}"
 
 
 def _buy_list_sections(

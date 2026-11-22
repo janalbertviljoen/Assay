@@ -242,7 +242,7 @@ table_caption = "The next picks on the latest score date: score, score on the 0-
 prices_figure = "Share price of each next pick (USD, split-adjusted, dividends excluded) over the last {pick_years} years: earlier purchases of the investor who started in {pick_scenario} in green, the potential purchase at the latest price in orange."
 
 [buy_report]
-# The short buy report (VI_202611_003): the next picks and the buy list, no backtest.
+# The short buy report: the next picks and the buy list, no backtest.
 title = "Buy list"
 abstract = """The {picks} companies the value model ranks highest in the {index} on its latest score \
 date, {next_score_date}, and how {buy_total} {currency} would buy them today{own_added}. The picks change only at the next score date; the full report gives the \
@@ -269,13 +269,13 @@ the model are the same under all four and are never part of the model's wallets 
 table_caption = "The purchases of {buy_total} {currency} by score, by rank, by dip and blended, and the place of each latest close in its {range_years}-year range; the investor's own choice below the line."
 trend_title = "Where each price stands"
 trend_text = """Figure [[fig:trends]] shows each company's price over {trend_years} years against its {trend_days}-day \
-mean, shaded where the price was more than {slide} below its high of the past year, and beside it the \
+mean, shaded where the price was more than {slide} below its high of {high_period}, and beside it the \
 slope of the smoothed price, in percent a year. Table [[tab:trends]] gives the latest values and the \
 state they suggest: still falling, falling but slowing, turning up below the trend, or rising above \
 it. The state is not part of the model's score and has not been tested; it is shown to judge the \
 timing of a purchase by eye."""
-trend_caption = "Latest close, distance from the high of the past year and from the {trend_days}-day mean, place in the {range_years}-year range, the slope of the smoothed price a month ago and now (per year), and the state they suggest."
-trend_figure = "Price (USD, log scale) and its {trend_days}-day mean over {trend_years} years, shaded where more than {slide} below the high of the past year (left); slope of the smoothed log price per year over the last {slope_years} years (right)."
+trend_caption = "Latest close, distance from the high of {high_period} and from the {trend_days}-day mean, place in the {range_years}-year range, the slope of the smoothed price {lag_period} and now (per year), and the state they suggest."
+trend_figure = "Price (USD, log scale) and its {trend_days}-day mean over {trend_years} years, shaded where more than {slide} below the high of {high_period} (left); slope of the smoothed log price per year over the last {slope_years} years (right)."
 [static_figures]
 # The figures written out in the sections below ([missed], [testing], [dialogue]) are not computed by the
 # report command. They were produced on `produced`, with the model configuration of `model_fingerprint`

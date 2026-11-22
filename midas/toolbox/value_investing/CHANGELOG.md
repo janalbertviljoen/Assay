@@ -18,10 +18,10 @@ Naming and workflow: `midas/instructions/secretary.md`. The methodology is in
 | [VI_202610_009](changes/VI_202610_009-unit-tests.md) | Unit tests for the value tool and the market data it reads | tests | ready | high | VI_202610_002 to 007, MD_202610_004 |
 | [VI_202611_001](changes/VI_202611_001-model-calibration.md) | Model calibration: signed rule weights, point curves per rule, fitted cut-offs, sampled studies | methodology | in progress (first light) | high | S_202611_003 |
 | [VI_202611_002](changes/VI_202611_002-report-general-sells.md) | Report: general worst list, sells tracked in the wallet's cash flows | new capability | in progress | medium | VI_202610_006 |
-| [VI_202611_003](changes/VI_202611_003-personal-buy-list.md) | Personal buy list with price curves in the S&P 500 report | new capability | in progress | high | VI_202610_006, VI_202610_007 |
 
 ## Done
 
 | ID | Title | Done |
 |---|---|---|
+| [VI_202611_003](changes/done/VI_202611_003-personal-buy-list.md) | Personal buy list with price curves in the S&P 500 report | 2026-11-22 |
 | [VI_202611_004](changes/done/VI_202611_004-blended-dip-weighting.md) | Blended rank and dip weighting of the wallet's purchases (not adopted) | 2026-11-19 |

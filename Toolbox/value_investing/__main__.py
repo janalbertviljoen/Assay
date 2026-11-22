@@ -1,7 +1,7 @@
 r"""
 value_investing/__main__.py
 ---------------------------
-The terminal command that scores buyability and writes its diagnostic plots.
+The terminal commands that score buyability, test the score and write the reports.
 
 Run from the repository root, after ``python -m Toolbox.market_data update``::
 
@@ -9,32 +9,41 @@ Run from the repository root, after ``python -m Toolbox.market_data update``::
     .venv/bin/python -m Toolbox.value_investing evaluate --as-of 2026-10-31 --index sp400
     .venv/bin/python -m Toolbox.value_investing report --as-of 2026-10-31 --index sp400
 
-For a buying decision, score without the diagnostic plots and write the short buy report
-(VI_202611_003)::
+For a buying decision, score without the diagnostic plots and write the short buy report::
 
     .venv/bin/python -m Toolbox.value_investing buyability --as-of 2026-11-19 --no-plots
     .venv/bin/python -m Toolbox.value_investing buy --as-of 2026-11-19
 
 Every command works on one index of ``config/indices.toml`` (``--index``, default
-``sp500``): its members are the universe and its benchmark the comparison. It reads the
-stored tables of the as-of date, each checked against its schema in
-``value_investing.schema.INPUT_TABLES`` as it is read (``market_data.validation.check_table``),
-runs ``value_investing.pipeline`` with ``config/rules.toml``, writes the buyability table to
+``sp500``): its members are the universe and its benchmark the comparison. The readers
+are in ``value_investing.io``: each stored table of the as-of date is checked against its
+schema as it is read (``market_data.validation.check_table``), the pipeline's inputs
+against ``value_investing.schema.INPUT_TABLES`` and the tables only the reports read (the
+FRED exchange rates of the buy list) against ``REPORT_TABLES``. ``buyability`` runs
+``value_investing.pipeline`` with ``config/rules.toml``, writes the buyability table to
 ``data/interim/value_investing/<as_of>/<index>/buyability_<view>.parquet`` per universe
-view, and the plots and the sample to ``results/value_investing/<index>/<as_of>/buyability/``;
-``buyability`` prints each view's pipeline report (the soft-expectation notices).
+view, and ``rule_weights_<view>.csv``, the plots and the sample to
+``results/value_investing/<index>/<as_of>/buyability/``; it prints each view's pipeline
+report (the soft-expectation notices). With ``--no-plots`` it stops after the tables and
+the rule-weight CSVs, writing no plots and no sample.
 The stored buyability tables are this tool's own output and are not checked when
-``evaluate`` and ``report`` read them.
+``evaluate``, ``report`` and ``buy`` read them.
 ``evaluate`` reads that table and writes the paper test of the score
 (``value_investing.evaluation``) and the ledger of one wallet (``value_investing.ledger``:
 ``ledger.md``, ``ledger.csv``, ``ledger_balance.csv``) to
 ``results/value_investing/<index>/<as_of>/evaluation/``. ``report`` writes the
 buy-and-hold report (``value_investing.holding``, ``value_investing.report``) to
 ``results/value_investing/<index>/<as_of>/report/`` and compiles it when a LaTeX engine
-is found. ``buy`` writes only ``buy_report.pdf`` to
-``results/value_investing/<index>/<as_of>/``: the next picks, the buy list in the
-investor's currency and the price trend of each company in it, built in a temporary
-folder.
+is found. Only for an index with ``buy_list = true`` in ``config/indices.toml`` does the
+report show the buy list: it then reads the FRED observations of the as-of date and
+writes ``buy_list.csv``, ``trends.csv`` and ``trends.png`` beside the report; for any
+other index it reads no FRED data. ``buy`` writes only ``buy_report.pdf`` to
+``results/value_investing/<index>/<as_of>/``: the next picks, the buy list and the price
+trend of each company in it (``value_investing.io.buy_report_inputs``), built in a
+temporary folder. It shows the buy list whatever the index's ``buy_list`` flag, with the
+neutral amounts of ``[report.buy_list]``, and reads the FRED observations only when the
+currency is not USD; the
+investor's own amounts are private and reach only ``steward``'s report.
 
 Owns
 ----
@@ -49,8 +58,8 @@ Public API
 ----------
 main(argv)
     Run ``buyability``, ``evaluate``, ``report`` or ``buy``; returns the exit code.
-buy_report_inputs(*, as_of, rules, index, data_dir, indices, report_text, folder)
-    Read the stored tables and return the short buy report's inputs (for ``steward``).
+model_fingerprint(rules)
+    A short hash of the model settings the report's hand-written figures were made with.
 evaluation_settings(rules)
     The ``[evaluation]`` settings of ``config/rules.toml``, with ``[score]
     min_companies``.

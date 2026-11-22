@@ -115,8 +115,11 @@ personal allocation; this hat is private, for the founder alone.
 
 ## Warden report
 
-Reviewed together with VI_202611_003 on 2026-11-22 (commit fffc8d6); the report is in
-[VI_202611_003](../../value_investing/changes/VI_202611_003-personal-buy-list.md).
+Reviewed together with VI_202611_003 on 2026-11-22 (commit fffc8d6). Its findings for the
+steward (the private report text tracked, the build outside `data/private/`, the import
+from a command module, value-keyed placeholders, the unused finances date) were fixed;
+the run is recorded in the Outcome of
+[VI_202611_003](../../value_investing/changes/done/VI_202611_003-personal-buy-list.md).
 
 ## Kickoff prompt
 

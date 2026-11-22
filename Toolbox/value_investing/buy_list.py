@@ -36,8 +36,10 @@ Computes
 rank-ramp weight, linear rank weight : ramp_weights
     w_k = a_k / Σ a_j with a_k = first + (last - first) (k - 1) / (n - 1) for ranks
     k = 1..n; one company gets 1.
-blended rank and dip weight : buy_list
-    w = (b_r w_rank + b_d w_dip) / (b_r + b_d), with (b_r, b_d) = ``blend``.
+dip weight, blended rank and dip weight, fractional shares : buy_list
+    Dip: the rank-ramp weights given in the order of ``in_range``, lowest first.
+    Blend: w = (b_r w_rank + b_d w_dip) / (b_r + b_d), with (b_r, b_d) = ``blend``.
+    Each amount A (investor's currency): usd = A / rate, shares = usd / close.
 
 Dependency rule
 ---------------
@@ -208,7 +210,8 @@ def trend_states(trends: pd.DataFrame, *, lag_days: int) -> pd.DataFrame:
     trends : pd.DataFrame
         ``price_trends`` output.
     lag_days : int
-        Trading days back for the earlier slope.
+        Trading days back for the earlier slope: the slope ``lag_days`` rows before
+        the last of each company.
 
     Returns
     -------
@@ -217,7 +220,22 @@ def trend_states(trends: pd.DataFrame, *, lag_days: int) -> pd.DataFrame:
         ``from_trend``, ``in_range``, ``slope``, ``slope_before`` (``lag_days`` earlier) and
         ``state``: ``falling`` (slope below 0 and lower than before), ``falling,
         slowing`` (below 0 but higher than before), ``turning up below trend`` (slope
-        at or above 0, price below its trend mean) or ``rising above trend``.
+        at or above 0, price below its trend mean) or ``rising above trend``. Empty
+        (no columns) when ``trends`` is empty.
+
+    Raises
+    ------
+    IndexError
+        When a company has fewer than ``lag_days + 1`` rows.
+
+    Notes
+    -----
+    The comparisons are strict and a missing value compares as false, so a missing
+    measure does not raise but falls to a state: a missing earlier slope with a
+    negative slope reads as ``falling, slowing``; a slope of exactly 0, or a missing
+    slope, is not falling; a missing trend mean (fewer than ``trend_days`` prices)
+    with a slope that is not falling reads as ``rising above trend``. The state is a
+    reading for the investor, not part of the score.
     """
     rows: list[dict[str, object]] = []
     for symbol, part in trends.groupby("symbol", sort=False):
