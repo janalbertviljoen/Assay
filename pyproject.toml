@@ -21,6 +21,9 @@ mcp = ["fastmcp>=2.0"]
 notebooks = ["ipykernel>=6.29"]
 # Reading the founder's private workbooks in data/private/ (S_202611_006).
 private = ["openpyxl>=3.1"]
+# Reading the strategy library in data/raw/library/: legacy .xls data files (Shiller,
+# Damodaran) and the text of its PDF papers.
+library = ["xlrd>=2.0", "pypdf>=5.0"]
 sandbox = [
     "ccxt>=4.0",
     "plotly>=5.20",
@@ -40,6 +43,7 @@ dev = [
     { include-group = "mcp" },
     { include-group = "notebooks" },
     { include-group = "private" },
+    { include-group = "library" },
     { include-group = "sandbox" },
     { include-group = "lint" },
     { include-group = "test" },
