@@ -84,7 +84,25 @@ A new engine in `Toolbox/skatkis/backtest/`, alongside the existing single-asset
 - Spec §9.4: wallet input contract: signals, target weights (proposed) or orders.
 - Spec §9.2: bottom ten as avoid/sell only, or shorted?
 - Cost model: fixed basis points per trade (proposed), or per-share commission plus
-  spread?
+  spread? Proposal for later, not to build now (user, 2026-11-16): costs and tax
+  depend on the member's platform and country, so they are inputs, not constants:
+  - a **platform profile** in config: commission (a percentage with a minimum per
+    trade), spread or slippage in basis points, currency conversion and custody fees;
+    EasyEquities USD the first example, plain basis points per trade the default;
+  - a **tax profile**: dividend withholding (for a South African resident holding US
+    shares normally 15% under the treaty, to be checked), capital gains tax on sales,
+    and the account type (a tax-free account is exempt); rates are the member's own
+    input, never a rate Midas recommends;
+  - the **benchmark charged the same way**: `^SP500TR` assumes gross dividends at no
+    cost, while a member holds the index through an ETF with its fee, withholding and
+    trading costs;
+  - a **sensitivity table** in the report: excess return at 0, 25, 50 and 100 basis
+    points, before and after tax.
+
+  Today no layer charges costs or tax (`skatkis.backtest.wallet`,
+  `value_investing.ledger`, the BTC harness), against the spec (§ overfitting, "net of
+  explicit transaction costs") and `researcher.md`; the report states it. A methodology
+  change: Buffett's letters first (2005, "helpers" and frictional costs).
 - Confirm the temporary dependency of `skatkis.midas.server` on the sandbox harness
   (from S_202610_001), which this change removes when the lab tools move to the
   portfolio engine.

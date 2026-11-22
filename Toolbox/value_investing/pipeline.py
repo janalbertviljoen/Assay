@@ -6,7 +6,10 @@ Wires the layers: rule inputs, valuation ratios, the rule flags and the score.
 ``buyability`` is the one place the layers meet (``.claude/rules/layers.md``): it builds
 the rule inputs, computes the shared ratios, runs every rule in the config through the
 registry and scores the flags. Its output is the long table of the first slice: one row
-per company and rebalance date, one column per rule value and flag, then the score.
+per company and rebalance date, one column per rule value and flag, then the score. The
+table passes the output gate (``value_investing.validation.check_buyability``) against
+its schema (``value_investing.schema``) before it is returned, with the soft
+expectations it breaches as notices.
 
 Owns
 ----
@@ -19,22 +22,23 @@ Compute ratios, flags or scores itself (``value_investing.layers``,
 
 Public API
 ----------
-Buyability(table, correlations, weights)
-    The buyability table and the learned rule weights.
+Buyability(table, correlations, weights, report)
+    The buyability table, the learned rule weights and the run's notices.
 buyability(tables, config, *, end, view, benchmark)
     The buyability table of one universe view from the first rebalance date to ``end``.
 
 Dependency rule
 ---------------
-pandas and ``value_investing``.
+pandas, ``skatkis.pipelines.report`` and ``value_investing``.
 """
 
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 import pandas as pd
 
+from Toolbox.skatkis.pipelines.report import PipelineReport, expectation_notices
 from Toolbox.value_investing.inputs import (
     Tables,
     members_on_date,
@@ -44,7 +48,9 @@ from Toolbox.value_investing.inputs import (
 )
 from Toolbox.value_investing.layers.valuation import valuation
 from Toolbox.value_investing.rules import RULES, pass_column, value_column
+from Toolbox.value_investing.schema import KEY, buyability_schema, pipeline_schema
 from Toolbox.value_investing.scoring import learned_score, rule_points, score
+from Toolbox.value_investing.validation import check_buyability
 from Toolbox.value_investing.weighting import correlation_weights, rule_correlations
 
 
@@ -60,11 +66,15 @@ class Buyability:
         Per date and rule, the rank correlation of points and forward excess return.
     weights : pd.DataFrame
         Per date and rule, the learned weight used on that date.
+    report : PipelineReport
+        The soft expectations the table breaches (``value_investing.schema``),
+        reported, never raised.
     """
 
     table: pd.DataFrame
     correlations: pd.DataFrame
     weights: pd.DataFrame
+    report: PipelineReport = field(default_factory=PipelineReport)
 
 
 def buyability(
@@ -174,8 +184,17 @@ def buyability(
     table = table.astype({"symbol": "string"}).merge(sectors, on="symbol", how="left")
     front = ["symbol", "date", "gics_sector", "close", *ratios.columns]
     rest = [c for c in table.columns if c not in front]
+    table = table[front + rest].sort_values(["symbol", "date"], ignore_index=True)
+    schema = pipeline_schema(
+        list(config["rules"]), buckets=int(config["score"]["buckets"])
+    )
+    # Output gate and soft expectations: wiring only; the checks are elsewhere.
+    table_schema = buyability_schema(schema)
+    check_buyability(table, table_schema)
+    notices = expectation_notices(table, table_schema, context="buyability", grain=KEY)
     return Buyability(
-        table=table[front + rest].sort_values(["symbol", "date"], ignore_index=True),
+        table=table,
         correlations=correlations,
         weights=weights,
+        report=PipelineReport(notices=notices),
     )

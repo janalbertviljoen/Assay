@@ -41,10 +41,15 @@ load_companyfacts(ciks, *, provider, store, as_of, tag_map)
     Snapshot and parse several companies into one table.
 format_cik(cik)
     A CIK as the 10-digit, zero-padded string EDGAR uses.
+COMPANYFACTS_COLUMNS, COMPANYFACTS_SCHEMA
+    The columns and dtypes of the parsed facts, and their schema.
+FACTS_TABLE_SCHEMA
+    The schema of the stored facts table (the parsed facts plus ``snapshot_as_of``).
 
 Dependency rule
 ---------------
-pandas, the standard library, ``skatkis.io`` and ``market_data.sources.tag_map``.
+pandas, the standard library, ``skatkis.io``, ``skatkis.pipelines`` and
+``market_data.sources.tag_map``.
 """
 
 import json
@@ -59,6 +64,17 @@ from Toolbox.market_data.sources.tag_map import TAG_MAP, FieldMap
 from Toolbox.skatkis.io.api import ApiClient
 from Toolbox.skatkis.io.provider import DataProvider, RawPayload
 from Toolbox.skatkis.io.snapshots import SnapshotStore, fetch_snapshot
+from Toolbox.skatkis.pipelines.contracts import Schema
+from Toolbox.skatkis.pipelines.schema import (
+    allowed_values,
+    from_dtypes,
+    identifier,
+    non_negative,
+    positive,
+    required,
+    type_date,
+    unique_key,
+)
 
 COMPANYFACTS_URL = "https://data.sec.gov/api/xbrl/companyfacts/CIK{cik}.json"
 SUBMISSIONS_URL = "https://data.sec.gov/submissions/CIK{cik}.json"
@@ -92,6 +108,51 @@ COMPANYFACTS_COLUMNS: dict[str, str] = {
 the filing was accepted by SEC. ``frame`` is SEC's calendar frame (e.g. ``CY2023Q4I``),
 present only on the value SEC deems current for that period.
 """
+
+COMPANYFACTS_SCHEMA: Schema = from_dtypes(
+    COMPANYFACTS_COLUMNS,
+    {
+        "cik": required | unique_key | positive,
+        "entity_name": required,
+        "field": identifier
+        | required
+        | unique_key
+        | allowed_values({f.field for f in TAG_MAP}),
+        "taxonomy": identifier
+        | required
+        | allowed_values({taxonomy for f in TAG_MAP for taxonomy, _ in f.tags}),
+        "tag": identifier
+        | required
+        | unique_key
+        | allowed_values({tag for f in TAG_MAP for _, tag in f.tags}),
+        "tag_priority": required | non_negative,
+        "unit": identifier
+        | required
+        | unique_key
+        | allowed_values({f.unit for f in TAG_MAP}),
+        "value": required,
+        "period_start": unique_key,
+        "period_end": required | unique_key,
+        "form": identifier | required,
+        "filed": required,
+        "accession": identifier | required | unique_key,
+    },
+)
+"""The parsed facts: one row per reported value, keyed on the company, the filing, the
+field and tag, the unit and the period (``period_start`` missing for an instant). Only
+the fields, taxonomies, tags and units of ``TAG_MAP`` are allowed: the stored table is
+parsed with the default map, which reads only those. The read gate checks them too, so a
+table parsed under an earlier ``TAG_MAP`` is refused until it is parsed again;
+``update_edgar`` parses each company's latest snapshot again on every run, a reused one
+included. ``filed`` may
+precede ``period_end`` (a dividend declared ahead, a share count on a cover page); the
+value was public on ``filed``."""
+
+FACTS_TABLE_SCHEMA: Schema = COMPANYFACTS_SCHEMA | {
+    "snapshot_as_of": type_date | required
+}
+"""The stored facts table: the parsed facts plus ``snapshot_as_of``, the date of the
+snapshot each row came from, which the update adds."""
 
 _SORT_ORDER = ["field", "tag_priority", "period_end", "filed", "accession"]
 

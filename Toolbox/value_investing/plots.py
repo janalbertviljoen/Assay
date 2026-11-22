@@ -62,6 +62,8 @@ score_against_return(returns)
     Mean next-quarter excess return per score.
 information_coefficient(ic)
     The rank correlation of score and next-quarter excess return per date.
+price_trends(trends, symbols, *, years, slope_years, slide)
+    Each company's price and trend mean beside its smoothed slope.
 
 Dependency rule
 ---------------
@@ -76,7 +78,14 @@ from collections.abc import Mapping, Sequence
 
 import numpy as np
 import pandas as pd
+from matplotlib.dates import DateFormatter, MonthLocator
 from matplotlib.figure import Figure
+from matplotlib.ticker import (
+    FuncFormatter,
+    LogLocator,
+    NullFormatter,
+    PercentFormatter,
+)
 
 from Toolbox.skatkis.analysis import (
     plot_bars,
@@ -785,3 +794,75 @@ def peer_profile(profile: pd.DataFrame, label: str) -> Figure:
         title=f"Rule points of the {label} and of our picks",
         ylabel="Mean points (0 to 5)",
     )
+
+
+def _plain_number(value: float, _position: int | None = None) -> str:
+    """Return an axis value as a plain number (``60``, not ``6 x 10^1``)."""
+    return f"{value:g}"
+
+
+def price_trends(
+    trends: pd.DataFrame,
+    symbols: Sequence[str],
+    *,
+    years: int,
+    slope_years: int,
+    slide: float,
+) -> Figure:
+    """Plot each company's price and trend mean beside its smoothed slope, one row each.
+
+    Parameters
+    ----------
+    trends : pd.DataFrame
+        ``value_investing.buy_list.price_trends`` output.
+    symbols : Sequence[str]
+        The companies, in the order of the rows.
+    years : int
+        Years of price on the left (log scale), from the latest date.
+    slope_years : int
+        Years of slope on the right.
+    slide : float
+        Stretches where the price is more than this fraction below its running high
+        are shaded red.
+    """
+    figure = Figure(figsize=(12, 1.45 * len(symbols)))
+    axes = figure.subplots(len(symbols), 2, squeeze=False, width_ratios=[3, 2])
+    for row, symbol in enumerate(symbols):
+        own = trends[trends["symbol"] == symbol].sort_values("date")
+        end = pd.Timestamp(own["date"].max())
+        shown = own[own["date"] > end - pd.DateOffset(years=years)]
+        left, right = axes[row]
+        left.plot(shown["date"], shown["price"], lw=1, label="price")
+        left.plot(shown["date"], shown["trend_mean"], lw=1, ls="--", label="trend mean")
+        left.fill_between(
+            shown["date"],
+            shown["price"],
+            shown["high"],
+            where=(shown["from_high"] < -slide).to_list(),
+            color="tab:red",
+            alpha=0.15,
+            label=f"more than {slide:.0%} below the high",
+        )
+        left.set_yscale("log")
+        left.yaxis.set_major_locator(LogLocator(base=10, subs=(1.0, 2.0, 3.0, 5.0)))
+        left.yaxis.set_major_formatter(FuncFormatter(_plain_number))
+        left.yaxis.set_minor_formatter(NullFormatter())
+        left.set_ylabel("USD")
+        last = own.iloc[-1]
+        left.set_title(
+            f"{symbol}  {float(last['price']):,.2f} on {end:%Y-%m-%d}  "
+            f"({float(last['from_high']):+.0%} from high)",
+            loc="left",
+            fontsize=9,
+        )
+        recent = own[own["date"] > end - pd.DateOffset(years=slope_years)]
+        right.plot(recent["date"], recent["slope"], lw=1, color="tab:green")
+        right.axhline(0, color="black", lw=0.6)
+        right.yaxis.set_major_formatter(PercentFormatter(1.0, decimals=0))
+        right.xaxis.set_major_locator(MonthLocator(bymonth=[1, 7]))
+        right.xaxis.set_major_formatter(DateFormatter("%b %Y"))
+        right.set_title("slope of the smoothed price, per year", loc="left", fontsize=9)
+        if row == 0:
+            left.legend(fontsize=7, loc="upper left")
+    figure.tight_layout()
+    return figure

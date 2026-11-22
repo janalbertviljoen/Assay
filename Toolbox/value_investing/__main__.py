@@ -1,7 +1,7 @@
 r"""
 value_investing/__main__.py
 ---------------------------
-The terminal command that scores buyability and writes its diagnostic plots.
+The terminal commands that score buyability, test the score and write the reports.
 
 Run from the repository root, after ``python -m Toolbox.market_data update``::
 
@@ -9,19 +9,41 @@ Run from the repository root, after ``python -m Toolbox.market_data update``::
     .venv/bin/python -m Toolbox.value_investing evaluate --as-of 2026-10-31 --index sp400
     .venv/bin/python -m Toolbox.value_investing report --as-of 2026-10-31 --index sp400
 
+For a buying decision, score without the diagnostic plots and write the short buy report::
+
+    .venv/bin/python -m Toolbox.value_investing buyability --as-of 2026-11-19 --no-plots
+    .venv/bin/python -m Toolbox.value_investing buy --as-of 2026-11-19
+
 Every command works on one index of ``config/indices.toml`` (``--index``, default
-``sp500``): its members are the universe and its benchmark the comparison. It reads the
-stored tables of the as-of date, runs ``value_investing.pipeline`` with
-``config/rules.toml``, writes the buyability table to
+``sp500``): its members are the universe and its benchmark the comparison. The readers
+are in ``value_investing.io``: each stored table of the as-of date is checked against its
+schema as it is read (``market_data.validation.check_table``), the pipeline's inputs
+against ``value_investing.schema.INPUT_TABLES`` and the tables only the reports read (the
+FRED exchange rates of the buy list) against ``REPORT_TABLES``. ``buyability`` runs
+``value_investing.pipeline`` with ``config/rules.toml``, writes the buyability table to
 ``data/interim/value_investing/<as_of>/<index>/buyability_<view>.parquet`` per universe
-view, and the plots and the sample to ``results/value_investing/<index>/<as_of>/buyability/``.
+view, and ``rule_weights_<view>.csv``, the plots and the sample to
+``results/value_investing/<index>/<as_of>/buyability/``; it prints each view's pipeline
+report (the soft-expectation notices). With ``--no-plots`` it stops after the tables and
+the rule-weight CSVs, writing no plots and no sample.
+The stored buyability tables are this tool's own output and are not checked when
+``evaluate``, ``report`` and ``buy`` read them.
 ``evaluate`` reads that table and writes the paper test of the score
 (``value_investing.evaluation``) and the ledger of one wallet (``value_investing.ledger``:
 ``ledger.md``, ``ledger.csv``, ``ledger_balance.csv``) to
 ``results/value_investing/<index>/<as_of>/evaluation/``. ``report`` writes the
 buy-and-hold report (``value_investing.holding``, ``value_investing.report``) to
 ``results/value_investing/<index>/<as_of>/report/`` and compiles it when a LaTeX engine
-is found.
+is found. Only for an index with ``buy_list = true`` in ``config/indices.toml`` does the
+report show the buy list: it then reads the FRED observations of the as-of date and
+writes ``buy_list.csv``, ``trends.csv`` and ``trends.png`` beside the report; for any
+other index it reads no FRED data. ``buy`` writes only ``buy_report.pdf`` to
+``results/value_investing/<index>/<as_of>/``: the next picks, the buy list and the price
+trend of each company in it (``value_investing.io.buy_report_inputs``), built in a
+temporary folder. It shows the buy list whatever the index's ``buy_list`` flag, with the
+neutral amounts of ``[report.buy_list]``, and reads the FRED observations only when the
+currency is not USD; the
+investor's own amounts are private and reach only ``steward``'s report.
 
 Owns
 ----
@@ -35,7 +57,9 @@ Compute flags, scores, diagnostics or the evaluation (``value_investing.pipeline
 Public API
 ----------
 main(argv)
-    Run ``buyability``, ``evaluate`` or ``report``; returns the exit code.
+    Run ``buyability``, ``evaluate``, ``report`` or ``buy``; returns the exit code.
+model_fingerprint(rules)
+    A short hash of the model settings the report's hand-written figures were made with.
 evaluation_settings(rules)
     The ``[evaluation]`` settings of ``config/rules.toml``, with ``[score]
     min_companies``.
@@ -51,6 +75,7 @@ import json
 import shutil
 import subprocess
 import sys
+import tempfile
 from collections.abc import Sequence
 from dataclasses import dataclass, replace
 from datetime import date
@@ -59,12 +84,12 @@ from typing import Any
 
 import pandas as pd
 
-from Toolbox.market_data.sources.prices import yahoo_symbol
 from Toolbox.skatkis.io.config import load_config
 from Toolbox.skatkis.io.figures import save_figure
 from Toolbox.skatkis.io.tables import read_table, write_table
 from Toolbox.skatkis.report import compile_pdf
 from Toolbox.value_investing import (
+    buying,
     diagnostics,
     evaluation,
     holding,
@@ -75,53 +100,41 @@ from Toolbox.value_investing import (
     report,
 )
 from Toolbox.value_investing.inputs import index_universe, price_on
+from Toolbox.value_investing.io import (
+    StoredIndex,
+    assemble_buy_list,
+    buy_report_inputs,
+    company_names,
+    read_input,
+    read_report_table,
+    stored_index,
+)
 from Toolbox.value_investing.pipeline import Buyability, Tables, buyability
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    """Run the ``buyability``, ``evaluate`` or ``report`` command."""
+    """Run the ``buyability``, ``evaluate``, ``report`` or ``buy`` command."""
     args = _parser().parse_args(argv)
     if args.command == "evaluate":
         return _evaluate(args)
     if args.command == "report":
         return _report(args)
+    if args.command == "buy":
+        return _buy(args)
     return _buyability(args)
 
 
 LATEX_ENGINES = ("tectonic", "latexmk", "pdflatex")
 
 
-@dataclass(frozen=True)
-class _Index:
-    """The index a command works on, and where its tables and results live."""
-
-    key: str
-    label: str
-    benchmark: str
-    benchmark_name: str
-    membership: str
-    interim: Path
-    tables: Path
-    members: Path
-    results: Path
-
-
-def _index(args: argparse.Namespace) -> _Index:
+def _index(args: argparse.Namespace) -> StoredIndex:
     """Return the ``--index`` entry of ``config/indices.toml`` and its folders."""
-    entry = load_config(args.indices)[args.index]
-    as_of = args.as_of.isoformat()
-    interim = args.data_dir / "interim"
-    return _Index(
-        key=args.index,
-        label=str(entry["label"]),
-        benchmark=str(entry["benchmark"]),
-        benchmark_name=str(entry["benchmark_name"]),
-        membership=str(entry["membership"]),
-        interim=interim,
-        tables=interim / "value_investing" / as_of / args.index,
-        members=interim / "constituents" / as_of / args.index,
-        results=args.results_dir / "value_investing" / args.index / as_of,
-    )
+    return stored_index(args.index, args.as_of, args.data_dir, args.indices)
+
+
+def _results(args: argparse.Namespace) -> Path:
+    """Return the index's results folder for the as-of date, under ``--results-dir``."""
+    return args.results_dir / "value_investing" / args.index / args.as_of.isoformat()
 
 
 def _buyability(args: argparse.Namespace) -> int:
@@ -132,7 +145,7 @@ def _buyability(args: argparse.Namespace) -> int:
     tables = _load_tables(index, args.as_of.isoformat(), rules, market)
     prices, universe = tables.prices, tables.universe
     benchmark = index.benchmark
-    folder = index.results / "buyability"
+    folder = _results(args) / "buyability"
     folder.mkdir(parents=True, exist_ok=True)
     views = [str(v) for v in rules["universe"]["views"]]
     results: dict[str, Buyability] = {}
@@ -150,6 +163,10 @@ def _buyability(args: argparse.Namespace) -> int:
         write_table(table, index.tables / f"buyability_{view}.parquet")
         result.weights.to_csv(folder / f"rule_weights_{view}.csv", float_format="%.4f")
         results[view] = replace(result, table=table)
+    if args.no_plots:
+        for view, result in results.items():
+            print(f"{view}: {result.report.summary()}")
+        return 0
     # The diagnostics describe the first view.
     first = results[views[0]]
     table = first.table
@@ -192,6 +209,8 @@ def _buyability(args: argparse.Namespace) -> int:
         save_figure(figure, folder / f"{name}.png")
 
     print(f"Views {', '.join(views)}; diagnostics on {views[0]}")
+    for view, result in results.items():
+        print(f"{view}: {result.report.summary()}")
     print(
         f"{table['symbol'].nunique()} companies, {len(dates)} rebalance dates "
         f"({dates[0]:%Y-%m-%d} to {dates[-1]:%Y-%m-%d}), {len(pass_columns)} rules"
@@ -216,9 +235,7 @@ def _evaluate(args: argparse.Namespace) -> int:
     }
     # The detailed evaluation describes the first view; the comparison covers all.
     table = tables[views[0]]
-    prices = read_table(
-        index.interim / "yahoo" / args.as_of.isoformat() / "prices.parquet"
-    )
+    prices = read_input(index.interim / "yahoo" / args.as_of.isoformat(), "prices")
     benchmark = index.benchmark
     settings = evaluation_settings(rules)
     trading_days = prices[prices["symbol"] == benchmark]["date"]
@@ -256,7 +273,7 @@ def _evaluate(args: argparse.Namespace) -> int:
     )
     book = _ledger(_Run(table, prices, decisions, settings, benchmark), rules)
 
-    folder = index.results / "evaluation"
+    folder = _results(args) / "evaluation"
     folder.mkdir(parents=True, exist_ok=True)
     score.to_csv(folder / "model_score.csv", index=False, float_format="%.4f")
     comparison.to_csv(folder / "model_comparison.csv", index=False, float_format="%.4f")
@@ -435,14 +452,16 @@ def _ledger_markdown(book: ledger.Ledger, rules: dict[str, Any], view: str) -> s
     return "\n".join(lines) + "\n"
 
 
-def _report(args: argparse.Namespace) -> int:
+def _report(
+    args: argparse.Namespace,
+) -> int:
     """Write the buy-and-hold report's figures and LaTeX, and compile it to PDF."""
     rules = load_config(args.rules)
     as_of = args.as_of.isoformat()
     index = _index(args)
     view = str(rules["universe"]["views"][0])
     table = read_table(index.tables / f"buyability_{view}.parquet")
-    prices = read_table(index.interim / "yahoo" / as_of / "prices.parquet")
+    prices = read_input(index.interim / "yahoo" / as_of, "prices")
     settings = rules["report"]
     compare = [index.benchmark, *[str(s) for s in settings["compare"]]]
     start_years = [int(y) for y in settings["start_years"]]
@@ -453,14 +472,7 @@ def _report(args: argparse.Namespace) -> int:
         first_year=min(start_years),
         months=[int(m) for m in settings["decision_months"]],
     )
-    model = evaluation.Wallet(
-        score_column=str(rules["ledger"]["score_column"]),
-        weighting="score",
-        names=int(rules["wallet"]["names"]),
-        book_usd=float(settings["amount_usd"]),
-        horizon_months=int(rules["wallet"]["horizon_months"]),
-        rank_weights=tuple(float(w) for w in rules["wallet"]["rank_weights"]),
-    )
+    model = buying.report_wallet(rules)
     positions = evaluation.ranked_positions(table, decisions, model).merge(
         table[["symbol", "gics_sector"]].drop_duplicates("symbol"), on="symbol"
     )
@@ -506,18 +518,13 @@ def _report(args: argparse.Namespace) -> int:
         start_years=start_years,
         end=end,
     )
-    now = evaluation.ranked_positions(table, [end], model)
-    now = now.merge(
-        table[["symbol", "date", "gics_sector", str(settings["share_column"])]],
-        left_on=["symbol", "score_date"],
-        right_on=["symbol", "date"],
-    ).rename(columns={str(settings["share_column"]): "score_share"})
-    upcoming = now[now["side"] == "buy"]
-    worst = now[now["side"] == "sell"].sort_values(["score", "symbol"])
-    changes = read_table(index.members / "changes.parquet")
+    upcoming, worst = buying.next_picks(
+        table, end, model, str(settings["share_column"])
+    )
+    changes = read_input(index.members, "changes")
     paths = pd.concat([held.paths, managed.paths], ignore_index=True)
 
-    folder = index.results / "report"
+    folder = _results(args) / "report"
     folder.mkdir(parents=True, exist_ok=True)
     figures = {
         "yearly": save_figure(
@@ -544,6 +551,7 @@ def _report(args: argparse.Namespace) -> int:
     figures.update(
         _price_figures(prices, managed.trades, upcoming, worst, settings, folder)
     )
+    buy = _report_buy_list(index, as_of, prices, upcoming, end, settings, folder)
     if peer_view is not None:
         figures["peers"] = save_figure(
             plots.peer_profile(peer_view.profile, peer_view.label),
@@ -576,7 +584,7 @@ def _report(args: argparse.Namespace) -> int:
         lookahead=check,
         survivorship=diagnostics.survivorship(changes, start_years),
         reference=int(settings["reference_start"]),
-        names=_company_names(index.members / "constituents.parquet"),
+        names=company_names(index.members / "constituents.parquet"),
         index_label=index.label,
         benchmark_name=index.benchmark_name,
         membership=index.membership,
@@ -596,6 +604,7 @@ def _report(args: argparse.Namespace) -> int:
         threshold=float(settings["sell_threshold"]),
         tier_cutoffs=[float(c) for c in settings["tier_cutoffs"]],
         verdict_band=float(settings["verdict_band"]),
+        buy=buy,
         static_note=_static_note(rules, report_text, as_of),
         ranking=_ranking(
             table, end, model, str(settings["share_column"]), folder / "ranking.csv"
@@ -623,6 +632,33 @@ def _report(args: argparse.Namespace) -> int:
     print("Next picks:")
     print(upcoming[["symbol", "score", "score_share", "weight"]].to_string(index=False))
     return _compile(tex, args.data_dir)
+
+
+def _report_buy_list(  # noqa: PLR0913, PLR0917  one argument per input the list reads
+    index: StoredIndex,
+    as_of: str,
+    prices: pd.DataFrame,
+    upcoming: pd.DataFrame,
+    end: pd.Timestamp,
+    settings: dict[str, Any],
+    folder: Path,
+) -> report.BuyList | None:
+    """Return the full report's buy list, or None when the index does not show one.
+
+    Also writes ``buy_list.csv`` and ``trends.csv`` and the trend figure to ``folder``.
+    """
+    if not index.buy_list:
+        return None
+    rates = read_report_table(index.interim / "fred" / as_of, "observations")
+    buy = assemble_buy_list(prices, upcoming, end, settings["buy_list"], folder, rates)
+    _write_buy_tables(buy, folder)
+    return buy
+
+
+def _write_buy_tables(buy: report.BuyList, folder: Path) -> None:
+    """Write the buy list and the trend states as ``buy_list.csv`` and ``trends.csv``."""
+    buy.orders.to_csv(folder / "buy_list.csv", index=False, float_format="%.4f")
+    buy.states.to_csv(folder / "trends.csv", index=False, float_format="%.4f")
 
 
 def _ranking(
@@ -758,24 +794,63 @@ def _price_figures(  # noqa: PLR0913, PLR0917  one argument per table the figure
     }
 
 
+def _buy(args: argparse.Namespace) -> int:
+    """Write the short buy report: the next picks, the buy list and the price charts.
+
+    Only ``buy_report.pdf`` is kept in the index's results folder; the figures and the
+    LaTeX are built in a temporary folder.
+    """
+    rules = load_config(args.rules)
+    index = _index(args)
+    text = load_config(args.report_text)
+    _results(args).mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory() as build:
+        folder = Path(build)
+        inputs = buy_report_inputs(
+            as_of=args.as_of,
+            rules=rules,
+            index=args.index,
+            data_dir=args.data_dir,
+            indices=args.indices,
+            report_text=args.report_text,
+            folder=folder,
+        )
+        tex = report.build_buy_report(
+            inputs,
+            text,
+            folder=folder,
+            subtitle=f"{index.label}, data as of {args.as_of.isoformat()}",
+        )
+        code = _compile(tex, args.data_dir)
+        if code == 0 and tex.with_suffix(".pdf").exists():
+            target = _results(args) / "buy_report.pdf"
+            shutil.copyfile(tex.with_suffix(".pdf"), target)
+            print(f"Buy report: {target}")
+    return code
+
+
 def _load_tables(
-    index: _Index, as_of: str, rules: dict[str, Any], market: dict[str, Any]
+    index: StoredIndex, as_of: str, rules: dict[str, Any], market: dict[str, Any]
 ) -> Tables:
-    """Return the stored tables of ``as_of`` the pipeline reads, with the index's universe."""
+    """Return the stored tables of ``as_of`` the pipeline reads, with the index's universe.
+
+    Each table passes the stored-table gate against its schema as it is read, so a table
+    written before the gate existed, or changed since, is checked too.
+    """
     interim = index.interim
     yahoo = interim / "yahoo" / as_of
     universe = index_universe(
-        read_table(index.members / "constituents.parquet"),
-        read_table(index.members / "changes.parquet"),
+        read_input(index.members, "constituents"),
+        read_input(index.members, "changes"),
         funds=market["benchmarks"]["sectors"],
         excluded=rules["universe"]["excluded_sectors"],
     )
     return Tables(
-        facts=read_table(interim / "edgar_companyfacts" / as_of / "facts.parquet"),
-        prices=read_table(yahoo / "prices.parquet"),
-        dividends=read_table(yahoo / "dividends.parquet"),
-        splits=read_table(yahoo / "splits.parquet"),
-        listings=read_table(yahoo / "listings.parquet"),
+        facts=read_input(interim / "edgar_companyfacts" / as_of, "facts"),
+        prices=read_input(yahoo, "prices"),
+        dividends=read_input(yahoo, "dividends"),
+        splits=read_input(yahoo, "splits"),
+        listings=read_input(yahoo, "listings"),
         universe=universe,
     )
 
@@ -800,17 +875,6 @@ def _compile(tex: Path, data_dir: Path) -> int:
         return 1
     print(f"Compiled {pdf}")
     return 0
-
-
-def _company_names(path: Path) -> dict[str, str]:
-    """Return each company's full name by price symbol, from the constituents table."""
-    constituents = read_table(path)
-    return {
-        yahoo_symbol(str(symbol)): str(name)
-        for symbol, name in zip(
-            constituents["symbol"], constituents["security"], strict=True
-        )
-    }
 
 
 def evaluation_settings(rules: dict[str, Any]) -> evaluation.Evaluation:
@@ -978,6 +1042,7 @@ def _parser() -> argparse.ArgumentParser:
         ("buyability", "score rules and plot diagnostics"),
         ("evaluate", "paper-test the stored score against the index's benchmark"),
         ("report", "write the buy-and-hold report (PDF)"),
+        ("buy", "write the short buy report: next picks and buy list (PDF only)"),
     ):
         command = commands.add_parser(name, help=help_text)
         command.add_argument("--as-of", type=date.fromisoformat, required=True)
@@ -998,6 +1063,12 @@ def _parser() -> argparse.ArgumentParser:
             type=Path,
             default=Path("config/report_value_investing.toml"),
         )
+        if name == "buyability":
+            command.add_argument(
+                "--no-plots",
+                action="store_true",
+                help="write the scored table only, without the diagnostic plots",
+            )
     return parser
 
 

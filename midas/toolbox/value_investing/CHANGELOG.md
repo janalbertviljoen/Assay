@@ -23,3 +23,5 @@ Naming and workflow: `midas/instructions/secretary.md`. The methodology is in
 
 | ID | Title | Done |
 |---|---|---|
+| [VI_202611_003](changes/done/VI_202611_003-personal-buy-list.md) | Personal buy list with price curves in the S&P 500 report | 2026-11-22 |
+| [VI_202611_004](changes/done/VI_202611_004-blended-dip-weighting.md) | Blended rank and dip weighting of the wallet's purchases (not adopted) | 2026-11-19 |

@@ -18,9 +18,9 @@ from Toolbox.SandBox.btc_vwap import harness as backtest
 READ_ONLY = {"readOnlyHint": True, "destructiveHint": False, "openWorldHint": False}
 
 mcp = FastMCP(
-    "trading-bot",
+    "midas",
     instructions=(
-        "Tools for measuring the Trading_Bot strategy. Fetch a dataset once, then "
+        "Tools for measuring Assay's value-investing strategies. Fetch a dataset once, then "
         "evaluate every strategy change with run_backtest/optimise_strategy using a "
         "holdout so improvements are judged out-of-sample. Use regression_check after "
         "refactors to prove behaviour is unchanged, and run_checks before proposing changes."

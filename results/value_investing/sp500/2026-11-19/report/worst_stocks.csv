@@ -1,0 +1,11 @@
+symbol,gics_sector,score,score_share,score_date
+ECHO,Communication Services,0.8333,0.0300,2026-09-18
+PANW,Information Technology,1.3958,0.0558,2026-09-18
+GEV,Industrials,1.6163,0.0727,2026-09-18
+SJM,Consumer Staples,1.9359,0.0517,2026-09-18
+DELL,Information Technology,2.4496,0.0707,2026-09-18
+EXC,Utilities,3.3317,0.1307,2026-09-18
+ABBV,Health Care,3.3821,0.0904,2026-09-18
+CAH,Health Care,3.5688,0.0954,2026-09-18
+HLT,Consumer Discretionary,3.8471,0.1028,2026-09-18
+F,Consumer Discretionary,3.8941,0.2534,2026-09-18

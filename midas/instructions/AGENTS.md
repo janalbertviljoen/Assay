@@ -8,7 +8,18 @@ needs, with [writing.md](writing.md) when it writes.
 
 ## What this repository is
 
-A trading bot: a deterministic, contract-gated value-investing system. S&P 500
+**Assay** is the user's company in charge of investments and financial planning; it
+decides the trades of the user's other businesses, **Monte Vista** (letting) and
+**Cavere** (longer-term loans and investments). **Midas** is its organiser of business
+administration and investments (user, 2026-11-22; S_202611_007). This repository is
+**public**: it holds Midas, the tools and the research, never private data. The user's
+personal files and Midas's private workspace (`Finances/`) live in the private
+repository around it (`~/Documents/Personal`). Each business has its own folder and
+private repository beside it in `~/Documents`: `Monte Vista/`, `Cavere/` (with Altana's
+historic documents) and `Dudley/`, the family game farm, whose `repo/` has its own agent
+(Jacob) (user, 2026-11-22).
+
+The core is a deterministic, contract-gated value-investing system. S&P 500
 fundamentals and prices are extracted point-in-time, scored with rules from Graham,
 Buffett and Munger, ranked each quarter, and fed to a backtest wallet that evaluates
 quarterly strategies. The goal is a sleeve for about 10% of new investments that beats
@@ -18,8 +29,9 @@ as the minimum (user, 2026-11-01).
 Code is imported from the root as `Toolbox.<package>`: `skatkis` (shared
 infrastructure, general finance, the backtest engine, Midas's server), `market_data`
 (sources, cleaned tables, shared metrics), `value_investing` (the rule-based tool),
-`hand_o_midas` (the machine-learning tool) and `SandBox` (exploratory, outside the
-standard). The full layout is in [developer.md](developer.md).
+`hand_o_midas` (the machine-learning tool), `steward` (the founder's private finances
+and personal report, on `value_investing`; its data only in the private workspace
+`~/Documents/Personal/Finances/`, never in this repository) and `SandBox` (exploratory, outside the standard). The full layout is in [developer.md](developer.md).
 
 ## The hats
 
@@ -115,8 +127,9 @@ did see a signal, so the letters come before the data mining.
 - editing baselines, reference values or tolerances to make a check pass, or
   generating reference values from the code under test and calling them independent;
 - judging a strategy on in-sample results only;
-- **access beyond the repository**: the rest of the machine (user profile, other
-  folders, credentials, keys) is off limits, also through the shell. API keys are read
+- **access beyond `~/Documents`**: the user's personal folder and businesses there
+  (`Personal/`, `Monte Vista/`, `Cavere/`, `Dudley/`), which agents may read, organise and
+  back up (user, 2026-11-22), are open; the rest of the machine (user profile, other folders, credentials, keys) is off limits, also through the shell. API keys are read
   from the environment at the command-line boundary only; raw vendor data stays in the
   git-ignored `data/` and is never committed or sent to another service.
 

@@ -1,12 +1,13 @@
 """
 skatkis/financial_logic.py
 --------------------------
-General financial mathematics shared by every tool: return definitions.
+General financial mathematics shared by every tool: returns, price trends and loans.
 
 Owns
 ----
-The definitions of growth, annualised return, annualised relative return, relative growth
-and forward excess return.
+The definitions of growth, annualised return, annualised relative return, relative growth,
+forward excess return, the price trend (trend mean, distance from the high, slope) and
+loan amortisation.
 
 Must not
 --------
@@ -26,6 +27,10 @@ holding_return(start, end)
     Simple return between two levels.
 money_weighted_return(flows, value, at)
     Annual internal rate of return of dated contributions and a final value.
+price_trend(prices, *, trend_days, smooth_days, high_days, range_days)
+    Trend mean, distance from the running high, place in the range and smoothed slope.
+amortise(balance, *, annual_rate, payment, months)
+    A loan's month-by-month interest, principal and balance under a fixed payment.
 
 Computes
 --------
@@ -47,15 +52,26 @@ holding return, simple return, period return : holding_return
 money-weighted return, internal rate of return, IRR : money_weighted_return
     The rate r with Σ c_k (1 + r)^((T - t_k) / 365.25) = V, c_k the contributions at
     t_k, V the value at T; found by bisection between -99% and +1000% a year.
+moving average, drawdown from high, place in range, price slope : price_trend
+    M(t) = mean of the last n prices (missing before n); H(t) = max of the last h
+    prices; P / H - 1 and P / M - 1; (P - L) / (U - L) with L and U the min and max of
+    the last r prices (H, L and U over the prices so far while fewer than h or r);
+    slope(t) = 252 * (E(t) - E(t-1)), per year, with E the exponential mean of ln P:
+    E(0) = ln P(0), E(t) = a ln P(t) + (1 - a) E(t-1), a = 2 / (s + 1).
+loan amortisation, bond balance, outstanding loan : amortise
+    I(m) = B(m-1) r / 12; B(m) = B(m-1) - (P - I(m)); the payment stops at B = 0.
 
 Dependency rule
 ---------------
 pandas and the standard library.
 """
 
+import math
+
 import pandas as pd
 
 DAYS_PER_YEAR = 365.25
+TRADING_DAYS_PER_YEAR = 252
 
 
 def annualised_growth(series: pd.Series, *, min_years: float = 1.0) -> float:
@@ -215,3 +231,110 @@ def money_weighted_return(flows: pd.Series, value: float, at: pd.Timestamp) -> f
         else:
             low = middle
     return (low + high) / 2
+
+
+def price_trend(
+    prices: pd.Series,
+    *,
+    trend_days: int,
+    smooth_days: int,
+    high_days: int,
+    range_days: int,
+) -> pd.DataFrame:
+    """Return a price's trend mean, distance from its high, place in range and slope.
+
+    Parameters
+    ----------
+    prices : pd.Series
+        Prices (USD) indexed by consecutive trading dates.
+    trend_days : int
+        Trading days in the trend mean.
+    smooth_days : int
+        Span of the exponential mean of the log price that is differentiated.
+    high_days : int
+        Trading days over which the running high is taken.
+    range_days : int
+        Trading days over which the low and high of the range are taken.
+
+    Returns
+    -------
+    pd.DataFrame
+        On the dates of the positive prices: ``price``; ``trend_mean``, the mean of the
+        last ``trend_days`` prices (missing before that many); ``high``, the highest of
+        the last ``high_days``; ``from_high`` = P / high - 1 and ``from_trend`` =
+        P / trend_mean - 1, as fractions; ``in_range`` = (P - L) / (U - L), L and U the
+        lowest and highest of the last ``range_days`` (0 at the low, 1 at the high;
+        missing when L = U); ``slope``, the daily change of the exponential mean of
+        ln P times 252, per year (missing on the first date).
+
+    Notes
+    -----
+    Each value uses prices up to its own date only. The slope counts trading days, not
+    calendar days, so a gap in the dates is read as one day.
+
+    The high and the range take partial windows at the start: until ``high_days`` or
+    ``range_days`` prices exist they cover the prices so far. A company with less than
+    ``range_days`` of history (five years at 1260) therefore gets a shorter range, and
+    its first price has ``from_high`` = 0 and a missing ``in_range`` (L = U). Only the
+    trend mean waits for a full window. Prices that are zero, negative or missing are
+    dropped before any measure is taken, so the windows count positive prices only.
+    """
+    levels = prices[prices > 0]
+    smoothed = levels.map(math.log).ewm(span=smooth_days, adjust=False).mean()
+    trend_mean = levels.rolling(trend_days, min_periods=trend_days).mean()
+    high = levels.rolling(high_days, min_periods=1).max()
+    low = levels.rolling(range_days, min_periods=1).min()
+    width = levels.rolling(range_days, min_periods=1).max() - low
+    return pd.DataFrame(
+        {
+            "price": levels,
+            "trend_mean": trend_mean,
+            "high": high,
+            "from_high": levels / high - 1,
+            "from_trend": levels / trend_mean - 1,
+            "in_range": (levels - low) / width.where(width > 0),
+            "slope": smoothed.diff() * TRADING_DAYS_PER_YEAR,
+        }
+    )
+
+
+def amortise(
+    balance: float, *, annual_rate: float, payment: float, months: int
+) -> pd.DataFrame:
+    """Return a loan's month-by-month balance under a fixed monthly payment.
+
+    Parameters
+    ----------
+    balance : float
+        The loan at the start (currency units).
+    annual_rate : float
+        Nominal yearly interest rate, as a fraction, charged monthly at rate / 12.
+    payment : float
+        Paid at the end of every month (currency units).
+    months : int
+        Months projected.
+
+    Returns
+    -------
+    pd.DataFrame
+        One row per month 1..months: ``interest`` = B(m-1) * rate / 12, ``principal``
+        = payment - interest, ``balance`` = B(m-1) - principal. Once the loan is repaid
+        the payment stops: the last payment is cut to what is owed and the balance stays
+        0. When the payment does not cover the interest the balance grows.
+    """
+    monthly = annual_rate / 12
+    rows: list[dict[str, float]] = []
+    owed = balance
+    for month in range(1, months + 1):
+        interest = owed * monthly
+        principal = min(payment - interest, owed) if owed > 0 else 0.0
+        owed = owed - principal
+        rows.append(
+            {
+                "month": float(month),
+                "interest": interest,
+                "principal": principal,
+                "balance": owed,
+            }
+        )
+    return pd.DataFrame(rows)
