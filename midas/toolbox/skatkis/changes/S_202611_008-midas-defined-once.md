@@ -45,6 +45,9 @@ Midas's instructions into every repository would let them drift apart.
 - 2026-11-22: the default workspace path, the instructions and the decision log updated
   (`ad315dc`); the package renamed by a pure move (`06cd034`), then its references;
   Black, ruff and pyright clean, 467 tests pass.
+- 2026-11-22 (user): the branch is merged into `main` before the change is finished, with
+  no Warden, to close the reorganisation and backup of the user's files; the change stays
+  `in progress` and the remaining steps go on a new branch.
 - Still to do: the user moves the folder and copies Claude Code's memory; then the thin
   agents and the `assay` skill in Personal, Monte Vista and Cavere.
 
