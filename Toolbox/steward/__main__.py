@@ -10,8 +10,8 @@ Run from the repository root, after the value tool has scored the as-of date::
 
 It reads the private finances (``finances.toml``) and the report's text
 (``report_text.toml``) from the private workspace ``--private-dir`` (default
-``../Finances``: ``~/Documents/Personal/Finances/``, the private repository around this
-public one), the value tool's picks and buy list for the index
+``../Personal/Finances``: ``~/Documents/Personal/Finances/``, the private repository
+beside this public one), the value tool's picks and buy list for the index
 (``value_investing.io.buy_report_inputs``, with the private amounts), builds the figures
 and the LaTeX in a temporary folder there, and keeps only
 ``<private-dir>/reports/<as_of>/personal_report.pdf``. Nothing private is written inside
@@ -144,7 +144,7 @@ def _parser() -> argparse.ArgumentParser:
     command.add_argument(
         "--private-dir",
         type=Path,
-        default=Path("../Finances"),
+        default=Path("../Personal/Finances"),
         help="the private workspace (the private repository's Finances/)",
     )
     command.add_argument(

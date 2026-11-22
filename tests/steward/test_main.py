@@ -143,6 +143,6 @@ def test_report_failed_compile_keeps_nothing(
 def test_the_default_inputs_are_private() -> None:
     # The private workspace sits beside the repository, in the private repository.
     args = cli._parser().parse_args(["report", "--as-of", AS_OF])
-    assert args.private_dir == Path("../Finances")
+    assert args.private_dir == Path("../Personal/Finances")
     assert args.finances is None
     assert args.text is None

@@ -14,10 +14,10 @@ decides the trades of the user's other businesses, **Monte Vista** (letting) and
 administration and investments (user, 2026-11-22; S_202611_007). This repository is
 **public**: it holds Midas, the tools and the research, never private data. The user's
 personal files and Midas's private workspace (`Finances/`) live in the private
-repository around it (`~/Documents/Personal`). Each business has its own folder and
-private repository beside it in `~/Documents`: `Monte Vista/`, `Cavere/` (with Altana's
+repository `~/Documents/Personal`. Assay sits beside it in `~/Documents/Assay`, and
+each business has its own folder and private repository there too: `Monte Vista/`, `Cavere/` (with Altana's
 historic documents) and `Dudley/`, the family game farm, whose `repo/` has its own agent
-(Jacob) (user, 2026-11-22).
+(Jacob) (user, 2026-11-22). All repositories sit on the same level in `~/Documents`.
 
 The core is a deterministic, contract-gated value-investing system. S&P 500
 fundamentals and prices are extracted point-in-time, scored with rules from Graham,
@@ -128,7 +128,7 @@ did see a signal, so the letters come before the data mining.
   generating reference values from the code under test and calling them independent;
 - judging a strategy on in-sample results only;
 - **access beyond `~/Documents`**: the user's personal folder and businesses there
-  (`Personal/`, `Monte Vista/`, `Cavere/`, `Dudley/`), which agents may read, organise and
+  (`Personal/`, `Assay/`, `Monte Vista/`, `Cavere/`, `Dudley/`), which agents may read, organise and
   back up (user, 2026-11-22), are open; the rest of the machine (user profile, other folders, credentials, keys) is off limits, also through the shell. API keys are read
   from the environment at the command-line boundary only; raw vendor data stays in the
   git-ignored `data/` and is never committed or sent to another service.
