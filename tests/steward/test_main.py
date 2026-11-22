@@ -52,6 +52,8 @@ def _args(tmp_path: Path) -> list[str]:
         AS_OF,
         "--data-dir",
         str(tmp_path / "data"),
+        "--private-dir",
+        str(tmp_path / "data" / "private" / "steward"),
         "--finances",
         str(inputs / "finances.toml"),
         "--text",
@@ -139,6 +141,8 @@ def test_report_failed_compile_keeps_nothing(
 
 
 def test_the_default_inputs_are_private() -> None:
+    # The private workspace sits beside the repository, in the private repository.
     args = cli._parser().parse_args(["report", "--as-of", AS_OF])
-    assert args.finances == Path("data/private/steward/finances.toml")
-    assert args.text == Path("data/private/steward/report_text.toml")
+    assert args.private_dir == Path("../Finances")
+    assert args.finances is None
+    assert args.text is None

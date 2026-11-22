@@ -4,7 +4,7 @@ steward/finances.py
 The founder's finances as the personal report reads them: the accounts, the property
 company and the listed funds against their guideline weights.
 
-The values come from the private input ``data/private/steward/finances.toml``, which
+The values come from the private input ``finances.toml`` in the private workspace, which
 ``steward.__main__`` reads; this module only turns the parsed mapping into typed
 records. No figures live in the code or in any tracked file.
 

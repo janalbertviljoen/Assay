@@ -4,9 +4,9 @@ steward/report.py
 Assembles the personal report: the whole portfolio, the property company's cash flow and
 projection, then the value picks and the buy list of ``value_investing``.
 
-The text is private, in ``data/private/steward/report_text.toml``; this
+The text is private, in ``report_text.toml`` of the private workspace; this
 module fills it from the private finances and builds the tables. ``skatkis.report``
-writes the LaTeX. The report is private and is written only under ``data/private/``.
+writes the LaTeX. The report is private and is written only in the private workspace.
 
 Owns
 ----

@@ -8,7 +8,16 @@ needs, with [writing.md](writing.md) when it writes.
 
 ## What this repository is
 
-A trading bot: a deterministic, contract-gated value-investing system. S&P 500
+**Assay** is the user's company in charge of investments and financial planning; it
+decides the trades of the user's other businesses, **Monte Vista** (letting) and
+**Cavere** (longer-term loans and investments). **Midas** is its organiser of business
+administration and investments (user, 2026-11-22; S_202611_007). This repository is
+**public**: it holds Midas, the tools and the research, never private data. The user's
+personal and business files, and Midas's private workspace (`Finances/`), live in the
+private repository around it (`~/Documents/Personal`); the Dudley family game farm has
+its own private repository and agent (Jacob).
+
+The core is a deterministic, contract-gated value-investing system. S&P 500
 fundamentals and prices are extracted point-in-time, scored with rules from Graham,
 Buffett and Munger, ranked each quarter, and fed to a backtest wallet that evaluates
 quarterly strategies. The goal is a sleeve for about 10% of new investments that beats
@@ -19,8 +28,8 @@ Code is imported from the root as `Toolbox.<package>`: `skatkis` (shared
 infrastructure, general finance, the backtest engine, Midas's server), `market_data`
 (sources, cleaned tables, shared metrics), `value_investing` (the rule-based tool),
 `hand_o_midas` (the machine-learning tool), `steward` (the founder's private finances
-and personal report, on `value_investing`; its data only in the git-ignored
-`data/private/`) and `SandBox` (exploratory, outside the standard). The full layout is in [developer.md](developer.md).
+and personal report, on `value_investing`; its data only in the private workspace
+`~/Documents/Personal/Finances/`, never in this repository) and `SandBox` (exploratory, outside the standard). The full layout is in [developer.md](developer.md).
 
 ## The hats
 

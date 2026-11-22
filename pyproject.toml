@@ -1,7 +1,7 @@
 [project]
-name = "trading-bot"
+name = "assay"
 version = "0.1.0"
-description = "Value-investing trading bot: S&P 500 fundamentals, quarterly ranking and backtest wallet"
+description = "Assay: value-investing research and Midas, its organiser of investments (S&P 500 fundamentals, quarterly ranking, backtest wallet)"
 requires-python = ">=3.11"
 
 # Dependencies are installed by group (pip >= 25.1), pinned by package_versions.txt:

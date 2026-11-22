@@ -74,7 +74,7 @@ from Toolbox.skatkis.pipelines.schema import (
 )
 
 CHART_URL = "https://query2.finance.yahoo.com/v8/finance/chart/{symbol}"
-USER_AGENT = "Mozilla/5.0 (compatible; trading-bot research)"
+USER_AGENT = "Mozilla/5.0 (compatible; Assay research)"
 
 PRICE_COLUMNS: dict[str, str] = {
     "symbol": "string",

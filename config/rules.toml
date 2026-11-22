@@ -235,8 +235,8 @@ pick_ends = 6
 # investor's own choice outside the model, never in the wallets. Amounts in `currency`,
 # turned into USD at the latest fx_series rate (FRED DEXSFUS: rand per USD) on or before
 # the report date; shares are fractional, as the investor's broker sells them.
-# Neutral defaults: the investor's own amounts are private (data/private/steward/
-# finances.toml, [buy_list]) and replace these in the personal report (user, 2026-11-22).
+# Neutral defaults: the investor's own amounts are private (finances.toml of the private
+# workspace, [buy_list]) and replace these in the personal report (user, 2026-11-22).
 currency = "USD"
 fx_series = "DEXSFUS"
 picks_amount = 100.0

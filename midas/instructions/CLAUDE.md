@@ -32,8 +32,8 @@ it. This file holds only what is specific to Claude Code.
 - **Area rules** in `.claude/rules/*.md` load automatically for matching paths:
   `midas-records.md` brings in `secretary.md` for `midas/`, `midas-index.md` brings in
   `developer.md` for Midas's server code.
-- **MCP.** The server is registered in `.mcp.json` (today as `trading-bot`, from
-  `Toolbox/skatkis/midas/server.py`; it becomes `midas` with change S_202610_002). Edits
+- **MCP.** The server is registered in `.mcp.json` as `midas` (S_202611_007), from
+  `Toolbox/skatkis/midas/server.py`; its index profile comes with S_202610_002. Edits
   to its code reach the running server only after Claude Code restarts it.
 - **Commands** for pytest, Black, ruff and pyright: `developer.md`, "Commands".
 - **Data updates and the report run outside the sandbox** (user, 2026-10-31): when the
