@@ -40,10 +40,11 @@ Every index answer carries its `provenance` (`code` or `docs`) and the git `comm
 `dirty` flag it was built from. Where code and documentation disagree, the code is
 trusted and `health` reports the contradiction.
 
-Status: the `lab` tools are served today as the `trading-bot` server
-(`Toolbox/skatkis/midas/server.py`), running the BTC harness in `Toolbox/SandBox/btc_vwap/`
-until the portfolio engine (S_202610_006) replaces it. The index and the rename to
-`midas` are change
+Status: the `lab` tools are served today as the `midas` server
+(`Toolbox/skatkis/midas/server.py`, renamed by
+[S_202611_007](toolbox/skatkis/changes/S_202611_007-assay-group-and-midas-organiser.md)),
+running the BTC harness in `Toolbox/SandBox/btc_vwap/` until the portfolio engine
+(S_202610_006) replaces it. The index is change
 [S_202610_002](toolbox/skatkis/changes/S_202610_002-midas-index-server.md).
 
 ## 4. Controls

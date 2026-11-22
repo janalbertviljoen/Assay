@@ -43,6 +43,6 @@ it. This file holds only what is specific to Claude Code.
   (`sandbox.excludedCommands`, `sandbox.network.allowedDomains`); active after Claude
   Code restarts.
 - **No prompts the user did not need.** Read and search with Read and Grep; keep Bash
-  for plain commands; no paths outside `~/Documents/Personal` except the session scratchpad;
+  for plain commands; no paths outside `~/Documents` except the session scratchpad;
   do not edit `.claude/settings.json` or hooks unless asked. The reasons are in
   [guard.md](guard.md).

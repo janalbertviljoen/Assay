@@ -2,11 +2,11 @@
 
 | Field | Value |
 |---|---|
-| Status | agreed |
+| Status | in progress |
 | Priority | high |
 | Kind | tooling |
 | Depends on | S_202611_006 (the steward), S_202610_002 (the server's rename to `midas`) |
-| Branch | — |
+| Branch | `feature/midas/s-202611-007-assay-group` |
 | Raised | 2026-11-22 |
 
 ## Description
@@ -51,6 +51,17 @@ research, never private data: the private side lives in the private repository.
 - 2026-11-22 (user): private data in the private `personal` repository; Dudley stays
   private (as decided on 2026-11-22 for the Dudley design); the local folder is renamed
   `Assay`; Midas may read, organise and back up the private repository.
+
+## Notes
+
+- 2026-11-22: migration checked against the kickoff prompt. The folder is `Assay`, the
+  server `midas` (`.mcp.json`), and the steward reads and writes `../Finances` (its
+  default in `Toolbox/steward/__main__.py`). No private data is tracked or in the git
+  history: the account numbers and names from the statements appear in no commit
+  (`git log --all -S`), and `data/` is git-ignored. Leftovers cleared: the empty
+  `Personal/Trading_Bot/` folder, its line in the private repository's `.gitignore`,
+  the `trading-bot` status in `midas.md` and the `Toolbox/__init__.py` docstring. Old
+  scratchpad paths in closed change files are historical and stay.
 
 ## Kickoff prompt
 
