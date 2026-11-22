@@ -213,6 +213,71 @@ Candidate strategies (all parameters explicit, seed explicit):
 - Hold until a stock drops out of the top N (buffer reduces turnover).
 - Graham's later rule of thumb: sell after 50% gain or after 2 years.
 
+### 5.1 The buy list and price trends
+
+The report can end with a buy list: a sum of money spread over the next picks under four weightings, the companies an investor buys outside the model, and where each price stands in its trend. It is a display for a buying decision. The model's wallets and every backtest weight by score; the other three weightings are shown beside it, were not adopted for the wallets, and are untested. The weights are in `value_investing.buy_list`, the trend measures in `skatkis.financial_logic.price_trend`, the assembly in `value_investing.buying`, and the settings in `[report.buy_list]` of `config/rules.toml`.
+
+**Commands.** Score without the diagnostic plots, then write the short buy report:
+
+```
+.venv/bin/python -m Toolbox.value_investing buyability --as-of <date> --no-plots
+.venv/bin/python -m Toolbox.value_investing buy --as-of <date>
+```
+
+`buyability --no-plots` writes the scored tables and the rule-weight CSVs only. `buy` keeps only `buy_report.pdf` in `results/value_investing/<index>/<as_of>/`: the next picks with their price history, the buy list and the trends; no backtest. The full `report` shows the buy list only for an index with `buy_list = true` in `config/indices.toml` (the S&P 500), and reads the FRED exchange rates only then.
+
+**Amounts.** The investor's amounts are private: `rules.toml` holds a neutral default (an amount in USD, no fixed purchases), which the personal report replaces with the investor's own currency, amount over the picks and fixed purchases. An amount $A$ in the investor's currency becomes $A / x$ USD, where $x$ is the latest value of the series `fx_series` (FRED; DEXSFUS is rand per USD) on or before the report date, and $x = 1$ for USD. The USD buys $A / (x P)$ shares, fractional, at the company's latest close $P$.
+
+**Weightings.** Let $F$ be the money for the picks (`picks_amount`), $n$ the number of picks, ranked $k = 1, \dots, n$ by score from the highest (ties by symbol), and $s_i$ the score of pick $i$. Each pick gets $F w_i$ under each of four weightings.
+
+- **Score**, the model's own weights:
+
+  $$w_i^{\text{score}} = \frac{s_i}{\sum_{j=1}^{n} s_j}.$$
+
+  When the scores sum to zero or less, the picks are weighted equally.
+- **Rank**, in equal steps from `rank_ramp` $= (f, \ell)$ for the first pick down to the last:
+
+  $$a_k = f + (\ell - f) \frac{k - 1}{n - 1}, \qquad w_k^{\text{rank}} = \frac{a_k}{\sum_{j=1}^{n} a_j}.$$
+
+  Only the ratio $f / \ell$ matters; at 3 to 1 over ten picks the first gets 15% and the last 5%. A single pick gets 1.
+- **Dip**, the same steps $w^{\text{rank}}$ given in a different order: first to the pick whose price is lowest in its range ($q_i$, below), then upwards. Picks with the same $q_i$ keep their score order; a pick without a range comes last.
+- **Blend** of rank and dip, with `blend` $= (b_r, b_d)$:
+
+  $$w_i^{\text{blend}} = \frac{b_r w_i^{\text{rank}} + b_d w_i^{\text{dip}}}{b_r + b_d}.$$
+
+  At 2 to 1 the blend is two thirds rank and one third dip.
+
+**Fixed purchases.** Each company in `fixed` gets the same amount under all four weightings. It is the investor's choice, made on the day: it never enters the model's wallets, the backtests or the results, and is shown below the picks as "own choice".
+
+**Trend measures.** Each company's trend uses its daily `close`: split-adjusted, with dividends excluded, so it is the price the market quotes and falls on an ex-dividend date. It is not the adjusted close, which reinvests dividends and is used for returns. Let $P(t)$ be the close on trading day $t$, using only closes up to $t$ and on or before the report date; zero, negative and missing closes are dropped. With the windows $m$ (`trend_days`), $h$ (`high_days`), $r$ (`range_days`) and the span $\lambda$ (`smooth_days`), all in trading days:
+
+$$M(t) = \frac{1}{m} \sum_{u=0}^{m-1} P(t - u), \qquad H(t) = \max_{0 \le u < h} P(t - u),$$
+
+$$L(t) = \min_{0 \le u < r} P(t - u), \qquad U(t) = \max_{0 \le u < r} P(t - u),$$
+
+where $M$ is the trend mean, $H$ the running high, and $L$ and $U$ the low and high of the range. $M$ is missing until $m$ closes exist; $H$, $L$ and $U$ take the closes so far until $h$ or $r$ exist, so a company with less than $r$ days of history has a shorter range. From these:
+
+$$\text{from\_high}(t) = \frac{P(t)}{H(t)} - 1, \qquad \text{from\_trend}(t) = \frac{P(t)}{M(t)} - 1, \qquad q(t) = \frac{P(t) - L(t)}{U(t) - L(t)},$$
+
+where $q$, the place in the range (`in_range`), is 0 at the low and 1 at the high, and missing when $U = L$. The slope is the daily change of the exponential mean $E$ of the log close, in log units per year:
+
+$$E(t) = \alpha \ln P(t) + (1 - \alpha) E(t - 1), \qquad E(0) = \ln P(0), \qquad \alpha = \frac{2}{\lambda + 1},$$
+
+$$\text{slope}(t) = 252 \, \big( E(t) - E(t - 1) \big).$$
+
+The slope counts trading days, so a gap in the dates is read as one day.
+
+**Trend states.** With $\sigma$ the latest slope and $\sigma'$ the slope `lag_days` trading days earlier, each company is in one of four states:
+
+| State | Condition |
+|---|---|
+| falling | $\sigma < 0$ and $\sigma < \sigma'$ |
+| falling, slowing | $\sigma < 0$ and $\sigma \ge \sigma'$ |
+| turning up below trend | $\sigma \ge 0$ and $\text{from\_trend} < 0$ |
+| rising above trend | $\sigma \ge 0$ and $\text{from\_trend} \ge 0$ |
+
+A missing $\sigma'$ reads as "falling, slowing" when $\sigma < 0$, and a missing trend mean as "rising above trend" when $\sigma \ge 0$. The states are a reading for timing a purchase by eye; they are not part of the score and have not been tested.
+
 ## 6. DAG pipeline
 
 ### 6.1 Node contract

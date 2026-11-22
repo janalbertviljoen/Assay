@@ -2,10 +2,12 @@
 
 import pytest
 
+from Toolbox.market_data.sources.fred import OBSERVATION_SCHEMA
 from Toolbox.market_data.update import TABLE_SCHEMAS
 from Toolbox.value_investing.schema import (
     INPUT_TABLES,
     KEY,
+    REPORT_TABLES,
     buyability_schema,
     pipeline_schema,
 )
@@ -119,3 +121,13 @@ def test_the_input_tables_are_those_the_pipeline_reads() -> None:
         "constituents",
         "changes",
     }
+
+
+def test_the_report_tables_are_the_fred_observations_only() -> None:
+    assert set(REPORT_TABLES) == {"observations"}
+    assert REPORT_TABLES["observations"] == OBSERVATION_SCHEMA
+    assert REPORT_TABLES["observations"] == TABLE_SCHEMAS["observations"]
+
+
+def test_the_report_tables_are_kept_apart_from_the_pipeline_inputs() -> None:
+    assert not set(REPORT_TABLES) & set(INPUT_TABLES)

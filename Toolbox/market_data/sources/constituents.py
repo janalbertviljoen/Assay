@@ -61,7 +61,7 @@ from Toolbox.skatkis.pipelines.schema import (
 )
 
 API_URL = "https://en.wikipedia.org/w/api.php"
-USER_AGENT = "trading-bot/0.1 (personal research; index membership)"
+USER_AGENT = "Assay/0.1 (personal research; index membership)"
 CHANGE_CELLS = 6
 
 CONSTITUENT_COLUMNS: dict[str, str] = {

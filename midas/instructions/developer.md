@@ -26,6 +26,10 @@ Agreed on 2026-10-31 and put in place by
   strategies, on `market_data`.
 - `Toolbox/hand_o_midas/`: sub-models trained on `market_data` with walk-forward
   splits, turned into strategies.
+- `Toolbox/steward/`: the founder's private finances (S_202611_006): projections and
+  the personal report, reusing `value_investing`'s picks; reads and writes its data only
+  in the private workspace `../Finances` (`~/Documents/Personal/Finances/`, the private
+  repository), never in this public one (S_202611_007).
 - `Toolbox/SandBox/`: exploratory code outside the standard and excluded from lint,
   including the original BTC VWAP bot.
 - `notebooks/`: display and exploration only; repeatable work runs as

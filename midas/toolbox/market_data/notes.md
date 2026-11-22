@@ -98,6 +98,8 @@ The full pull lost two companies (CIK 32604 and 864749) because one mapped field
 mismatch, so all their fields are lost. Option: drop only the field's values in the
 wrong unit and report it, keeping the company. This changes the "fail fast on unit
 mismatch" rule in `.claude/rules/sources.md`, so it is the user's decision.
+The same two failed again in the update of 2026-11-19; Emerson (CIK 32604) is an S&P 500
+member and is missing from that index's ranking on both dates.
 
 ### Large daily moves (2026-10-31, open)
 

@@ -14,6 +14,8 @@ changes_page = "Historical components of the S&P 500"
 benchmark = "^SP500TR"
 benchmark_name = "the S&P 500 total-return index"
 membership = "Each company counts from the date it entered the index, as the index's list gives it."
+# The report shows the personal buy list (VI_202611_003); only this index.
+buy_list = true
 
 [sp400]
 label = "S&P MidCap 400"
