@@ -142,6 +142,37 @@ Spec §1.3 prescribes Google style; the user chose the numpydoc structure of
 asks for `ruff format --check`, where the repository uses Black (warden, S_202611_001,
 2026-11-01); a spec decision for the scribe.
 
+### A strategy library to analyse other strategies (2026-11-22, open)
+
+The user wants a library of trading-strategy and market texts as the basis for analysing
+other strategies. A first snapshot sits in the git-ignored `data/raw/library/2026-11-22/`
+with a `manifest.tsv` (title, licence, URL, size, SHA-256 per file); private use only,
+never committed or redistributed, like the Berkshire letters.
+
+- **Fetched (20):**
+  - classics: Hamilton (1922, Dow theory), Bachelier (1900);
+  - papers: equity-premium prediction (Goyal and Welch; Campbell and Thompson; Campbell
+    and Shiller); factors (Buffett's Alpha, Betting Against Beta, gross profitability,
+    value and momentum everywhere); trend (a century of trend following, time-series
+    momentum); technical analysis (Lo, Mamaysky and Wang); multiple testing (Harvey, Liu
+    and Zhu; Hou, Xue and Zhang); 101 Formulaic Alphas;
+  - data: Shiller (since 1871, with CAPE and the 10-year rate), Damodaran's implied
+    equity risk premium (since 1960), Fama-French factors and momentum (since 1926).
+- **Still to fetch (7):** six Project Gutenberg books (Lefevre, Selden, Mackay, Butler,
+  *The Psychology of Speculation*, Crump) and the backtest-overfitting paper (Notices of
+  the AMS); the sandbox proxy refuses those hosts.
+- **Text not yet extracted:** no PDF reader works here (Swift's toolchain does not match
+  the SDK, and pip cannot reach PyPI from the sandbox).
+- **Copyrighted books** are bought and added under `purchased/`, never downloaded from
+  unauthorised copies (user's private use does not change that; 2026-11-22).
+
+Related, paused (2026-11-22): the valuation-spread analysis of the S&P 500 (earnings yield
+less the 10-year Treasury yield, as a hold-or-cash rule), designed in conversation and
+not yet run. Shiller's file gives the same spread from 1871, which answers its short
+history (about five independent 3-year windows since 2010). The letters' direction:
+stocks and bonds are valued alike (1992), low rates favour equities (2019), but Buffett
+does not forecast rates or time the market (1994, 2019).
+
 ## Open methodology questions
 
 ### EDGAR history is too short for the long Graham windows (2026-10-31, → VI_202610_002)
