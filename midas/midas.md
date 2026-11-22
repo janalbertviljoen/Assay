@@ -42,7 +42,7 @@ trusted and `health` reports the contradiction.
 
 Status: the `lab` tools are served today as the `midas` server
 (`Toolbox/skatkis/midas/server.py`, renamed by
-[S_202611_007](toolbox/skatkis/changes/S_202611_007-assay-group-and-midas-organiser.md)),
+[S_202611_007](toolbox/skatkis/changes/done/S_202611_007-assay-group-and-midas-organiser.md)),
 running the BTC harness in `Toolbox/SandBox/btc_vwap/` until the portfolio engine
 (S_202610_006) replaces it. The index is change
 [S_202610_002](toolbox/skatkis/changes/S_202610_002-midas-index-server.md).
