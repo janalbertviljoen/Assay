@@ -1,5 +1,5 @@
 """
-steward/plots.py
+financial_planning/plots.py
 ----------------
 The personal report's figure: the property's value, bond and equity over the years,
 one line style per growth scenario.
@@ -10,7 +10,7 @@ The title, axes and layout of the property projection figure.
 
 Must not
 --------
-Project (``steward.projection``); save files (``steward.__main__``).
+Project (``financial_planning.projection``); save files (``financial_planning.__main__``).
 
 Public API
 ----------
@@ -48,7 +48,7 @@ def property_paths(
 ) -> Figure:
     """Plot the property's value and equity per scenario, the bond and the savings.
 
-    ``projections`` maps a scenario's name to ``steward.projection.property_projection``
+    ``projections`` maps a scenario's name to ``financial_planning.projection.property_projection``
     output; the bond is the same in every scenario and drawn once. ``savings`` maps a
     label to a ``year``/``value`` projection, drawn in purple and orange. The x axis is
     the founder's age, ``start_age`` today.

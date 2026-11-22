@@ -1,5 +1,5 @@
 """
-steward/report.py
+financial_planning/report.py
 -----------------
 Assembles the personal report: the whole portfolio, the property company's cash flow and
 projection, then the value picks and the buy list of ``value_investing``.
@@ -14,7 +14,8 @@ The personal report's facts, tables and the order of its sections.
 
 Must not
 --------
-Project (``steward.projection``); plot (``steward.plots``); build the value picks'
+Project (``financial_planning.projection``); plot (``financial_planning.plots``);
+build the value picks'
 sections (``value_investing.report.buy_report_sections``).
 
 Public API
@@ -28,7 +29,7 @@ build_personal_report(inputs, text, value_text, *, folder, subtitle)
 
 Dependency rule
 ---------------
-``skatkis.report``, ``steward`` and ``value_investing.report``.
+``skatkis.report``, ``financial_planning`` and ``value_investing.report``.
 """
 
 from collections.abc import Callable, Mapping
@@ -36,9 +37,9 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
+from Toolbox.financial_planning import projection
+from Toolbox.financial_planning.finances import Finances
 from Toolbox.skatkis.report import Document, ReportFigure, Section, Table, write_latex
-from Toolbox.steward import projection
-from Toolbox.steward.finances import Finances
 from Toolbox.value_investing.report import BuyReport, buy_report_sections
 
 
@@ -47,7 +48,7 @@ class PersonalReport:
     """What the personal report shows.
 
     ``usd_rate`` is ZAR per USD for the USD accounts; ``property_figure`` the saved
-    ``steward.plots.property_paths`` figure.
+    ``financial_planning.plots.property_paths`` figure.
     """
 
     finances: Finances

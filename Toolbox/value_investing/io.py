@@ -5,7 +5,7 @@ Reads the stored tables an index's commands use, each through its schema gate, a
 assembles what the short buy report shows.
 
 The terminal commands (``value_investing.__main__``) and other tools that show the picks
-(``steward``) call these instead of reading files themselves; the results folder is the
+(``financial_planning``) call these instead of reading files themselves; the results folder is the
 caller's, never decided here.
 
 Owns
@@ -135,7 +135,7 @@ def buy_report_inputs(  # noqa: PLR0913  one keyword per input the command reads
 ) -> report.BuyReport:
     """Read the stored tables of ``as_of`` and return what the buy report shows.
 
-    Used by the ``buy`` command and by ``steward``'s personal report. Reads the first
+    Used by the ``buy`` command and by ``financial_planning``'s personal report. Reads the first
     universe view's buyability table, the Yahoo prices, the FRED observations and the
     constituents of ``index``; the end date is the benchmark's last price date.
 
@@ -161,7 +161,7 @@ def buy_report_inputs(  # noqa: PLR0913  one keyword per input the command reads
     amounts : Mapping[str, Any] | None
         The investor's ``currency``, ``picks_amount`` and ``fixed``, replacing those
         of ``[report.buy_list]`` (``rules.toml`` holds a neutral default in USD with
-        nothing fixed; ``steward`` passes the private amounts). Any other key given
+        nothing fixed; ``financial_planning`` passes the private amounts). Any other key given
         replaces the setting of the same name too. ``None`` keeps ``rules``.
 
     Returns

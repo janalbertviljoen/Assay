@@ -1,17 +1,17 @@
 r"""
-steward/__main__.py
+financial_planning/__main__.py
 -------------------
 The terminal command that writes the founder's personal report.
 
 Run from the repository root, after the value tool has scored the as-of date::
 
     .venv/bin/python -m Toolbox.value_investing buyability --as-of 2026-11-19 --no-plots
-    .venv/bin/python -m Toolbox.steward report --as-of 2026-11-19
+    .venv/bin/python -m Toolbox.financial_planning report --as-of 2026-11-19
 
 It reads the private finances (``finances.toml``) and the report's text
 (``report_text.toml``) from the private workspace ``--private-dir`` (default
-``../Finances``: ``~/Documents/Personal/Finances/``, the private repository around this
-public one), the value tool's picks and buy list for the index
+``../Personal/Finances``: ``~/Documents/Personal/Finances/``, the private repository
+beside this public one), the value tool's picks and buy list for the index
 (``value_investing.io.buy_report_inputs``, with the private amounts), builds the figures
 and the LaTeX in a temporary folder there, and keeps only
 ``<private-dir>/reports/<as_of>/personal_report.pdf``. Nothing private is written inside
@@ -23,8 +23,8 @@ The command-line interface and the private report's location.
 
 Must not
 --------
-Project, summarise or format (``steward.projection``, ``steward.report``); write
-anywhere but the private workspace.
+Project, summarise or format (``financial_planning.projection``,
+``financial_planning.report``); write anywhere but the private workspace.
 
 Public API
 ----------
@@ -33,7 +33,7 @@ main(argv)
 
 Dependency rule
 ---------------
-The standard library, ``skatkis.io``, ``skatkis.report``, ``steward`` and
+The standard library, ``skatkis.io``, ``skatkis.report``, ``financial_planning`` and
 ``value_investing``.
 """
 
@@ -46,11 +46,11 @@ from collections.abc import Sequence
 from datetime import date
 from pathlib import Path
 
+from Toolbox.financial_planning import plots, projection, report
+from Toolbox.financial_planning.finances import parse_finances
 from Toolbox.skatkis.io.config import load_config
 from Toolbox.skatkis.io.figures import save_figure
 from Toolbox.skatkis.report import compile_pdf
-from Toolbox.steward import plots, projection, report
-from Toolbox.steward.finances import parse_finances
 from Toolbox.value_investing.io import buy_report_inputs
 
 LATEX_ENGINE = "tectonic"
@@ -135,7 +135,7 @@ def _report(args: argparse.Namespace) -> int:
 
 def _parser() -> argparse.ArgumentParser:
     """Return the argument parser."""
-    parser = argparse.ArgumentParser(prog="python -m Toolbox.steward")
+    parser = argparse.ArgumentParser(prog="python -m Toolbox.financial_planning")
     commands = parser.add_subparsers(dest="command", required=True)
     command = commands.add_parser("report", help="write the personal report (PDF)")
     command.add_argument("--as-of", type=date.fromisoformat, required=True)
@@ -144,7 +144,7 @@ def _parser() -> argparse.ArgumentParser:
     command.add_argument(
         "--private-dir",
         type=Path,
-        default=Path("../Finances"),
+        default=Path("../Personal/Finances"),
         help="the private workspace (the private repository's Finances/)",
     )
     command.add_argument(

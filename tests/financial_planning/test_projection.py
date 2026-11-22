@@ -1,4 +1,4 @@
-"""The personal report's numbers (steward/projection.py)."""
+"""The personal report's numbers (financial_planning/projection.py)."""
 
 import math
 from dataclasses import replace
@@ -7,8 +7,8 @@ from typing import Any
 import pandas as pd
 import pytest
 
-from Toolbox.steward import projection
-from Toolbox.steward.finances import (
+from Toolbox.financial_planning import projection
+from Toolbox.financial_planning.finances import (
     Account,
     AfterBond,
     Finances,
