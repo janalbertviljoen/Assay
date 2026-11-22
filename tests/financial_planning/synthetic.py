@@ -1,4 +1,4 @@
-"""Synthetic inputs for the steward's tests; no figure comes from data/private/."""
+"""Synthetic inputs for the financial-planning tests; no figure comes from data/private/."""
 
 import tomllib
 from pathlib import Path

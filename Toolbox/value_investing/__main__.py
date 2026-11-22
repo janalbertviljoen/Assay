@@ -43,7 +43,7 @@ trend of each company in it (``value_investing.io.buy_report_inputs``), built in
 temporary folder. It shows the buy list whatever the index's ``buy_list`` flag, with the
 neutral amounts of ``[report.buy_list]``, and reads the FRED observations only when the
 currency is not USD; the
-investor's own amounts are private and reach only ``steward``'s report.
+investor's own amounts are private and reach only ``financial_planning``'s report.
 
 Owns
 ----

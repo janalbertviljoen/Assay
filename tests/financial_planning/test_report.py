@@ -1,4 +1,4 @@
-"""The personal report's facts, tables and LaTeX (steward/report.py)."""
+"""The personal report's facts, tables and LaTeX (financial_planning/report.py)."""
 
 from dataclasses import replace
 from pathlib import Path
@@ -6,9 +6,14 @@ from typing import Any
 
 import pytest
 
-from tests.steward.synthetic import make_buy_report, value_text
-from Toolbox.steward import report
-from Toolbox.steward.finances import AfterBond, Finances, Phase, parse_finances
+from tests.financial_planning.synthetic import make_buy_report, value_text
+from Toolbox.financial_planning import report
+from Toolbox.financial_planning.finances import (
+    AfterBond,
+    Finances,
+    Phase,
+    parse_finances,
+)
 
 USD_RATE = 20.0
 

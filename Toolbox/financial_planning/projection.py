@@ -1,5 +1,5 @@
 """
-steward/projection.py
+financial_planning/projection.py
 ---------------------
 The personal report's numbers: the net worth by part, the listed funds against their
 guideline weights, the property company's monthly cash flow and the projection of its
@@ -11,7 +11,8 @@ Net worth, allocation gaps, the property's monthly cash flow and its projection.
 
 Must not
 --------
-Read files or format text (``steward.__main__``, ``steward.report``); compute the
+Read files or format text (``financial_planning.__main__``,
+``financial_planning.report``); compute the
 loan schedule (``skatkis.financial_logic.amortise``).
 
 Public API
@@ -80,15 +81,21 @@ tax-free account room : tfsa_full_after
 
 Dependency rule
 ---------------
-pandas, ``skatkis.financial_logic`` and ``steward.finances``.
+pandas, ``skatkis.financial_logic`` and ``financial_planning.finances``.
 """
 
 from dataclasses import replace
 
 import pandas as pd
 
+from Toolbox.financial_planning.finances import (
+    Account,
+    Finances,
+    Person,
+    Property,
+    Tfsa,
+)
 from Toolbox.skatkis.financial_logic import amortise
-from Toolbox.steward.finances import Account, Finances, Person, Property, Tfsa
 
 BOND_COSTS = ("bond_instalment", "levies", "property_rates")
 
@@ -232,7 +239,7 @@ def savings_projection(
     ----------
     account : Account
         The account: ``value`` today, ``monthly`` contribution, ``growth``,
-        ``escalation``, ``raises`` and ``phased`` (``steward.finances.Account``).
+        ``escalation``, ``raises`` and ``phased`` (``financial_planning.finances.Account``).
     years : int
         Years projected; 0 gives the value today only.
     person : Person | None

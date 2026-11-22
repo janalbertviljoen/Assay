@@ -1,11 +1,11 @@
-"""The private input turned into typed records (steward/finances.py)."""
+"""The private input turned into typed records (financial_planning/finances.py)."""
 
 import datetime
 from typing import Any
 
 import pytest
 
-from Toolbox.steward.finances import Person, Phase, parse_finances
+from Toolbox.financial_planning.finances import Person, Phase, parse_finances
 
 
 def test_parse_finances_accounts_with_defaults(raw: dict[str, Any]) -> None:

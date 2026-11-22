@@ -4,7 +4,7 @@ paths:
   - "Toolbox/market_data/**/*.py"
   - "Toolbox/value_investing/**/*.py"
   - "Toolbox/hand_o_midas/**/*.py"
-  - "Toolbox/steward/**/*.py"
+  - "Toolbox/financial_planning/**/*.py"
 ---
 
 # Docstrings

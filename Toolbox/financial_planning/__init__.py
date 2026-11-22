@@ -1,1 +1,1 @@
-"""The steward tool: the founder's private finances and the personal report."""
+"""The financial-planning tool: an owner's private finances, projections and the planning report."""

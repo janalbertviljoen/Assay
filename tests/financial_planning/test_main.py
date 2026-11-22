@@ -1,4 +1,4 @@
-"""The personal report's command and where it writes (steward/__main__.py)."""
+"""The personal report's command and where it writes (financial_planning/__main__.py)."""
 
 import subprocess
 from pathlib import Path
@@ -6,11 +6,11 @@ from typing import Any
 
 import pytest
 
-from tests.steward.synthetic import FINANCES_TOML, REPO, make_buy_report
-from Toolbox.steward import __main__ as cli
+from tests.financial_planning.synthetic import FINANCES_TOML, REPO, make_buy_report
+from Toolbox.financial_planning import __main__ as cli
 
 AS_OF = "2026-11-19"
-TARGET = f"private/steward/reports/{AS_OF}"
+TARGET = f"private/financial_planning/reports/{AS_OF}"
 
 TEXT_TOML = """
 title = "Personal report"
@@ -53,7 +53,7 @@ def _args(tmp_path: Path) -> list[str]:
         "--data-dir",
         str(tmp_path / "data"),
         "--private-dir",
-        str(tmp_path / "data" / "private" / "steward"),
+        str(tmp_path / "data" / "private" / "financial_planning"),
         "--finances",
         str(inputs / "finances.toml"),
         "--text",

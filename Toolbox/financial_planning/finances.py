@@ -1,11 +1,11 @@
 """
-steward/finances.py
+financial_planning/finances.py
 -------------------
 The founder's finances as the personal report reads them: the accounts, the property
 company and the listed funds against their guideline weights.
 
 The values come from the private input ``finances.toml`` in the private workspace, which
-``steward.__main__`` reads; this module only turns the parsed mapping into typed
+``financial_planning.__main__`` reads; this module only turns the parsed mapping into typed
 records. No figures live in the code or in any tracked file.
 
 Owns
@@ -14,7 +14,8 @@ The structure of the private input.
 
 Must not
 --------
-Read files (``steward.__main__``); project or summarise (``steward.projection``).
+Read files (``financial_planning.__main__``); project or summarise
+(``financial_planning.projection``).
 
 Public API
 ----------

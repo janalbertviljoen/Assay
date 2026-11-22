@@ -76,6 +76,9 @@ personal allocation; this hat is private, for the founder alone.
 - 2026-11-22 (user, after the Warden's B1): the personal report's text is private too: it
   moves from `config/report_steward.toml` to `data/private/steward/report_text.toml`
   (git-ignored), and the tracked file is removed from the branch's history before the push.
+- 2026-11-22 (user): the package `Toolbox/steward/` is renamed `Toolbox/financial_planning/`,
+  a general tool for any owner (Personal now, Monte Vista and Cavere later); its data lives
+  in `~/Documents/Personal/Finances/` (S_202611_008).
 
 ## Notes
 

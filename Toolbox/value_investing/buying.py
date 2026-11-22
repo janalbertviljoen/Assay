@@ -5,7 +5,7 @@ The steps from the scored table to a buying decision, without IO: the report's w
 the next picks, the earlier trades of one investor, the exchange rate and the buy list.
 
 ``value_investing.__main__`` (the ``report`` and ``buy`` commands) and other tools that
-show the picks (``steward``) call these with tables they have read; nothing is read,
+show the picks (``financial_planning``) call these with tables they have read; nothing is read,
 written or plotted here.
 
 Owns
@@ -46,7 +46,7 @@ from Toolbox.value_investing import buy_list, evaluation, holding
 
 
 def report_wallet(rules: Mapping[str, Any]) -> evaluation.Wallet:
-    """Return the ranked wallet the report, the buy list and ``steward`` share.
+    """Return the ranked wallet the report, the buy list and ``financial_planning`` share.
 
     Parameters
     ----------
