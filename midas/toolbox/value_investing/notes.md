@@ -161,8 +161,10 @@ never committed or redistributed, like the Berkshire letters.
 - **Still to fetch (7):** six Project Gutenberg books (Lefevre, Selden, Mackay, Butler,
   *The Psychology of Speculation*, Crump) and the backtest-overfitting paper (Notices of
   the AMS); the sandbox proxy refuses those hosts.
-- **Text not yet extracted:** no PDF reader works here (Swift's toolchain does not match
-  the SDK, and pip cannot reach PyPI from the sandbox).
+- **Text:** extracted with `pypdf` (`Toolbox/SandBox/strategy_library/extract_text.py`)
+  into `data/interim/library/2026-11-22/`. The sandbox could not install it, so the user
+  installed `xlrd` and `pypdf` and regenerated the pins with `pip freeze` (the `library`
+  dependency group).
 - **Copyrighted books** are bought and added under `purchased/`, never downloaded from
   unauthorised copies (user's private use does not change that; 2026-11-22).
 
@@ -173,75 +175,85 @@ S&P 500's earnings yield and the 10-year Treasury yield. Run on Shiller's curren
 (1871–2026-11) with the Fama-French T-bill rate from 1926; design fixed before the run
 (earnings lagged 3 months, hold cash when the spread is below the 20th percentile of its
 history to date, 0.5% per switch, 36-month horizon, block bootstrap); two specifications
-tried.
+tried (`Toolbox/SandBox/valuation_spread/`). Figures after the Warden's timing fix (a signal
+trades from the following month; returns 1926-07 to 2026-08).
 
-- **Earnings yield less the nominal 10-year yield:** worse than holding, by
-  $-2.97\%$ a year over 1926-07 to 2026-09 (90% band $-4.86\%$ to $-0.87\%$), in cash 48% of
-  the months, out from 1980 to 2003; out-of-sample $R^2 = -0.018$. It compares a real
-  yield with a nominal one, so high inflation reads as "expensive".
-- **Shiller's excess CAPE yield (real):** no difference, $+0.02\%$ a year (band $-1.32\%$
-  to $+1.43\%$), lower drawdown ($-70\%$ against $-82\%$), in cash 8.5%; it exited
-  1929, 1937 and 1997–2002 but not 2008 or 2020; out-of-sample $R^2 = -0.006$.
-- **Today:** the excess CAPE yield is $+1.11\%$, at its 20th percentile, exactly on the
-  exit line; CAPE about 39. Expensive, so lower expected returns, but no timing edge.
+- **Earnings yield less the nominal 10-year yield:** worse than holding, $8.10\%$ against
+  $10.50\%$ a year; paired difference $-2.64\%$ a year (90% band $-4.54\%$ to $-0.53\%$); in
+  cash 48% of the months, out from 1980 to 2003; out-of-sample $R^2 = -0.027$. It compares a
+  real yield with a nominal one, so high inflation reads as "expensive".
+- **Shiller's excess CAPE yield (real):** no difference, $-0.19\%$ a year (band $-1.52\%$
+  to $+1.09\%$), lower drawdown ($-71\%$ against $-82\%$), in cash 8.5%; it exited
+  1929, 1937 and 1997–2002 but not 2008 or 2020; out-of-sample $R^2 = +0.017$, small, in
+  line with Campbell and Thompson.
+- **Latest complete month (2026-10):** the excess CAPE yield is $+1.21\%$, at its 21st
+  percentile, just above the exit line ($+1.11\%$); CAPE about 39. Expensive, so lower
+  expected returns, but no timing edge.
 - **The records agree:** Goyal and Welch (2004), none of the predictors beat the
   historical mean out of sample; Campbell and Thompson (2005), small but usable once the
   forecast is restricted; Campbell and Shiller warned in 1996 and the market rose for
   years; Buffett does not forecast rates or time the market (1994, 2019).
-- **Biases:** Shiller prices are monthly averages; pre-1926 earnings reconstructed; one
-  market; no taxes. Scripts in the session scratchpad, not in `Toolbox/`.
+- **Biases:** Shiller prices are monthly averages (the first run traded on returns that
+  began half a month before the signal: a look-ahead, removed); missing recent dividends
+  carried forward; pre-1926 earnings reconstructed; one market; no taxes.
 
 Open: a partial tilt (less equity when expensive) rather than all-or-nothing, and trend
 following (Hurst, Ooi and Pedersen), which did well in the crashes valuation missed.
 
 ### Trend following as the sell rule (2026-11-22, diagnostic, not adopted)
 
-Design fixed before the run (`Toolbox/SandBox/trend_following/`): S&P 500 from Shiller's
-monthly data, cash at the Fama-French T-bill rate, 0.5% per switch; two specifications.
+Design fixed before the run (`Toolbox/SandBox/trend_following/design.md`): S&P 500 from
+Shiller's monthly data, cash at the Fama-French T-bill rate, 0.5% per switch; two
+specifications. Figures after the Warden's timing fix (returns 1926-07 to 2026-08). The
+first run, on returns that began half a month before each signal, showed rule A ahead of
+the index (11.16% against 10.50%); that was the look-ahead.
 
 | Rule | Return a year | Index | Volatility (index 15.3%) | Worst fall (index −82%) | In cash |
 |---|---|---|---|---|---|
-| A, price above its 10-month average | 11.16% | 10.50% | 10.3% | −45% | 31% |
-| B, 12-month return above T-bills | 10.30% | 10.35% | 10.6% | −38% | 29% |
+| A, price above its 10-month average | 9.32% | 10.50% | 10.2% | −50% | 31% |
+| B, 12-month return above T-bills | 8.55% | 10.35% | 10.6% | −50% | 29% |
 
-- **Return:** no reliable gain; the monthly paired difference is $-0.03\%$ (A; 90% band
-  $-1.60\%$ to $+1.83\%$) and $-0.64\%$ (B; $-2.23\%$ to $+1.22\%$) a year. A's higher
-  compound return comes from lower volatility, not a higher average month.
-- **Risk:** the worst fall roughly halves, in both halves of the century (1976–2026: $-19\%$
-  for A against $-49\%$). Falls, A against the index: 1929–32 $-33\%$ / $-80\%$, 2000–02
-  $-5\%$ / $-41\%$, 2007–09 $-3\%$ / $-49\%$; but 2020 $-19\%$ / $-15\%$ (a sharp V
-  whipsaws a trend rule).
-- **At 2026-11:** both rules are in the index (price 7,619 against its 10-month average
-  7,358; 12-month return $+14.3\%$ against T-bills $+3.8\%$).
-- **Biases:** Shiller's prices are monthly averages, which add autocorrelation and flatter
-  trend rules; one market; no taxes (a switch in a taxable account realises gains, a
-  switch inside a tax-free account does not); tested on the S&P 500 only, not on
-  technology indices or single shares.
-- A bug found and fixed before reporting: a missing T-bill value read as "cash" in the
-  latest signal; the test period was unaffected.
+- **Return: a cost.** Paired difference $-1.72\%$ a year for A (90% band $-3.34\%$ to
+  $+0.12\%$) and $-2.25\%$ for B ($-4.00\%$ to $-0.36\%$, excludes zero).
+- **Risk:** the worst fall roughly halves, in both halves of the century (1976–2026: $-25\%$
+  for A against $-49\%$). Falls, A against the index: 1929–32 $-33\%$ / $-81\%$, 2000–02
+  $-3\%$ / $-38\%$, 2007–09 $-2\%$ / $-46\%$, 2022 $-6\%$ / $-17\%$; 2020 $-19\%$ / $-19\%$ (a
+  sharp V gives a trend rule no time).
+- **Latest complete month:** both rules in the index (A at 2026-10, B at 2026-09; Shiller's
+  November figure is a partial-month average and is not used).
+- **Biases:** missing recent dividends carried forward; one market; no taxes (a switch in a
+  taxable account realises gains, a switch inside a tax-free account does not).
+- Bugs found and fixed before or after reporting: a missing T-bill value read as "cash"
+  (before); the half-month look-ahead, a partial month shown as the current signal, an end
+  date set by the T-bill file, a control on longer dates, and a bootstrap that could not
+  draw the last block (after the Warden).
 
 Second test, technology (design fixed before the fetch): month-end closes of QQQ, XLK and
-NVDA from Yahoo (1999–2026-09, `fetch_tech.py`, own snapshot root), SPY as the control;
-six specifications counted.
+NVDA from Yahoo (returns from about 2000 to 2026-09, `fetch_tech.py`, own snapshot root),
+SPY as the control on the same months; six specifications.
 
-| Series | Rule A (10-month average): return / worst fall | Rule B (12-month): return / worst fall | Holding: return / worst fall |
-|---|---|---|---|
-| QQQ | 8.6% / −37% | 8.4% / −38% | 8.5% / −81% |
-| XLK | 8.8% / −43% | 10.5% / −28% | 9.5% / −81% |
-| NVDA | 37.4% / −58% | 27.1% / −79% | 36.9% / −87% |
-| SPY (control) | 9.2% / −25% | 10.5% / −20% | 10.7% / −51% |
+| Series | Rule A (10-month): return / worst fall | Rule B (12-month): return / worst fall | Holding: return / worst fall | Paired, A / B (90% band) |
+|---|---|---|---|---|
+| QQQ | 8.8% / −37% | 8.3% / −43% | 8.8% / −81% | $-1.7\%$ ($-7.1$ to $+3.6$) / $-1.1\%$ ($-6.4$ to $+1.1$) |
+| XLK | 9.2% / −43% | 10.9% / −28% | 9.9% / −81% | $-2.1\%$ ($-5.9$ to $+2.2$) / $+0.5\%$ ($-4.8$ to $+3.4$) |
+| NVDA | 38.1% / −58% | 27.7% / −79% | 37.6% / −87% | $-6.3\%$ ($-10.0$ to $+2.1$) / $-12.2\%$ ($-20.7$ to $-6.1$) |
+| SPY (control) | 7.4% / −24% | 8.4% / −20% | 8.2% / −51% | $-1.4\%$ ($-5.4$ to $+2.4$) / $-0.3\%$ ($-4.3$ to $+2.0$) |
 
-- On the indices: no reliable gain (paired bands include zero), the worst fall roughly
-  halved; 2000–02 on QQQ $-23\%$ (A) against $-74\%$.
-- On Nvidia, rule B cost $-12.2\%$ a year (90% band $-20.7\%$ to $-6.3\%$, excludes zero):
-  a single volatile share whipsaws a trend rule. Rule A: $-6.3\%$, band $-10.0\%$ to $+2.1\%$.
-- Reconciled with events (quant.md 14): from the 2026-10-06 highs to 2026-11-20, SPY
-  $-11.5\%$, QQQ $-20\%$, XLK $-26\%$, NVDA $-47.5\%$ (an AI-led sell-off after the 3 November
-  election and the departure of Nvidia's chief executive; checked against the daily path,
-  no split artefact). At the October close every series was above its 10-month average; on
-  20 November every one was below it (QQQ $-10\%$, XLK $-12\%$, NVDA $-35\%$, SPY $-5\%$), so
-  rule A would exit at the November close if prices stay there. Rule B is still in for the
-  indices, out for Nvidia.
+- On the funds: no reliable gain, the worst fall roughly halved (2000–02 on QQQ: $-33\%$
+  for A against $-81\%$).
+- On Nvidia, rule B cost $12.2\%$ a year, its band excluding zero: a single volatile share
+  whipsaws a trend rule.
+- **Latest complete month:** every series in (A at the 2026-10 close, B at 2026-09). The
+  partial November, to 2026-11-20 and not a signal, has every series below its 10-month
+  average (QQQ $-10\%$, XLK $-12\%$, NVDA $-37\%$, SPY $-5\%$).
+- **Events (quant.md 14), a hypothesis:** from the 2026-10-06 highs to 2026-11-20, SPY
+  $-11.5\%$, QQQ $-20\%$, XLK $-26\%$, NVDA $-47.5\%$; the daily path shows no split artefact.
+  Press reports (Yahoo Finance and others, 2026-11-20) attribute the fall to an AI-led
+  sell-off after the 3 November election and the departure of Nvidia's chief executive;
+  not tested here.
+
+Count across VI_202611_005: ten specifications (two valuation, two S&P trend, six
+technology; the control not counted). The bands are not adjusted for this multiple testing.
 
 ### Market valuations by region (2026-11-22, reading)
 

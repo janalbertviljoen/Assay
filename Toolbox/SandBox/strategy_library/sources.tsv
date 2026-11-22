@@ -21,7 +21,8 @@ moskowitz_ooi_pedersen_time_series_momentum.pdf	papers	Moskowitz, Ooi and Peders
 asness_moskowitz_pedersen_value_momentum_everywhere.pdf	papers	Asness, Moskowitz and Pedersen, Value and Momentum Everywhere	author copy	https://pages.stern.nyu.edu/~lpederse/papers/ValMomEverywhere.pdf
 bailey_borwein_lopezdeprado_zhu_2014_backtest_overfitting.pdf	papers	Bailey, Borwein, Lopez de Prado and Zhu (2014), Pseudo-Mathematics and Financial Charlatanism	Notices of the AMS, free	https://www.ams.org/notices/201405/rnoti-p458.pdf
 kakushadze_2016_101_formulaic_alphas.pdf	papers	Kakushadze (2016), 101 Formulaic Alphas	arXiv 1601.00991	https://arxiv.org/pdf/1601.00991
-shiller_ie_data.xls	data	Shiller, US stock market since 1871: prices, dividends, earnings, CAPE, 10-year rate	free from the author	http://www.econ.yale.edu/~shiller/data/ie_data.xls
+shiller_ie_data.xls	data	Shiller, US stock market since 1871 (current file; the snapshot of 2026-11-22 runs to 2026-11)	free from the author	https://img1.wsimg.com/blobby/go/e5e77e0b-59d1-44d9-ab25-4763ac982e53/downloads/249997aa-1eef-4237-93ec-2d319f7881ab/ie_data.xls?ver=1794837439406
+shiller_ie_data_yale_to_2023_09.xls	data	Shiller, stale Yale copy (to 2023-09), kept for reference	free from the author	http://www.econ.yale.edu/~shiller/data/ie_data.xls
 damodaran_histimpl.xls	data	Damodaran, historical implied equity risk premium, US, since 1960	free from the author	https://www.stern.nyu.edu/~adamodar/pc/datasets/histimpl.xls
 ff_research_factors_monthly.zip	data	Fama-French 3 factors and risk-free rate, monthly since 1926	free, Kenneth French Data Library	https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/F-F_Research_Data_Factors_CSV.zip
 ff_5_factors_monthly.zip	data	Fama-French 5 factors (2x3), monthly since 1963	free, Kenneth French Data Library	https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/F-F_Research_Data_5_Factors_2x3_CSV.zip

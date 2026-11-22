@@ -1,6 +1,8 @@
 #!/bin/bash
-# Fetch fund fact sheets into a dated, git-ignored snapshot; record a manifest. Deletes
-# nothing: each attempt goes to its own temporary file, and a verified PDF is moved in.
+# Fetch fund fact sheets into a dated folder; write its manifest. Each attempt goes to its
+# own temporary file and only a verified PDF is moved in. Run it into a new folder dated
+# the day it runs: in an existing folder it rewrites manifest.tsv and replaces a
+# <ticker>.pdf of the same name.
 # Usage: bash fetch_fund_sheets.sh <dest_dir> <fund_sheets.tsv> <tmp_dir>
 # The fund list names an owner's holdings, so it and the sheets live in the owner's
 # private workspace, never in this repository; e.g. from the repository root:

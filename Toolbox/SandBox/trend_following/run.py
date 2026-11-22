@@ -1,139 +1,75 @@
-"""Trend-following diagnostic, as fixed in design.md. Usage: run.py <library_snapshot_dir>"""
+"""Trend-following diagnostic on Shiller's S&P 500, as fixed in design.md.
+
+Usage (repository root):
+``.venv/bin/python -m Toolbox.SandBox.trend_following.run data/raw/library/2026-11-22``
+"""
 
 import sys
-import zipfile
 
 import numpy as np
-import pandas as pd
+
+from Toolbox.SandBox.strategy_library.series import (
+    TEST_END,
+    block_bootstrap,
+    cash_for_shiller_return,
+    compare,
+    falls,
+    load_rf,
+    load_shiller,
+    position_for_return,
+    shiller_return,
+    summary,
+)
 
 lib = sys.argv[1]
 COST, BLOCK, DRAWS = 0.005, 36, 2000
 rng = np.random.default_rng(20261122)
-CRASHES = {
-    "1929-32": ("1929-08", "1932-06"),
-    "1937-38": ("1937-02", "1938-03"),
-    "1973-74": ("1973-01", "1974-09"),
-    "2000-02": ("2000-08", "2002-09"),
-    "2007-09": ("2007-10", "2009-02"),
-    "2020": ("2020-01", "2020-03"),
-    "2022": ("2021-12", "2022-09"),
-}
 
-# --- Shiller ------------------------------------------------------------------------
-raw = pd.read_excel(
-    f"{lib}/data/shiller_ie_data.xls", sheet_name="Data", header=None, skiprows=8
-)
-raw = raw[pd.to_numeric(raw[0], errors="coerce").notna()]
-idx = pd.PeriodIndex(
-    [f"{int(x)}-{round((x - int(x)) * 100):02d}" for x in raw[0].astype(float)],
-    freq="M",
-)
-d = pd.DataFrame(
-    {
-        "P": pd.to_numeric(raw[1], errors="coerce").values,
-        "D": pd.to_numeric(raw[2], errors="coerce").values,
-    },
-    index=idx,
-)
-d = d[~d.index.duplicated()]
+d = load_shiller(lib)
+d["R"] = shiller_return(d)
+d["CASH"] = cash_for_shiller_return(load_rf(lib), d.index)
+rf = load_rf(lib).reindex(d.index)
 
-# --- Fama-French RF -----------------------------------------------------------------
-with zipfile.ZipFile(f"{lib}/data/ff_research_factors_monthly.zip") as z:
-    txt = z.read(z.namelist()[0]).decode("latin1")
-rows = []
-for line in txt.splitlines():
-    parts = [p.strip() for p in line.split(",")]
-    if len(parts) == 5 and parts[0].isdigit() and len(parts[0]) == 6:
-        rows.append((parts[0], float(parts[4]) / 100))
-    elif rows and parts and parts[0].isdigit() and len(parts[0]) == 4:
-        break
-rf = pd.Series(dict(rows))
-rf.index = pd.PeriodIndex([f"{k[:4]}-{k[4:]}" for k in rf.index], freq="M")
-d["RF"] = rf
-
-# Return over month t -> t+1, and the return earned in month t (for the 12-month signal).
-d["R"] = (d["P"].shift(-1) + d["D"].ffill() / 12) / d["P"] - 1
-d["R_past"] = d["R"].shift(1)  # return earned over t-1 -> t, known at t
-
-
-def compare(a: pd.Series, b: pd.Series) -> pd.Series:
-    """1.0 where a > b, 0.0 where not, NaN where either input is missing (never 'cash')."""
-    return (a > b).astype(float).where(a.notna() & b.notna())
-
-
+# R_t runs mid t to mid t+1; the 12 returns R_{t-12}..R_{t-1} span mid t-12 to mid t,
+# known at the end of t, against the T-bills of months t-11..t.
+eq12 = (1 + d["R"].shift(1)).rolling(12).apply(np.prod, raw=True)
+rf12 = (1 + rf).rolling(12).apply(np.prod, raw=True)
 ma10 = d["P"].rolling(10).mean()
-eq12 = (1 + d["R_past"]).rolling(12).apply(np.prod, raw=True)
-rf12 = (1 + d["RF"].shift(1)).rolling(12).apply(np.prod, raw=True)
 signals = {"A_ma10": compare(d["P"], ma10), "B_tsmom12": compare(eq12, rf12)}
 
 
-def stats(r: pd.Series) -> dict:
-    w = (1 + r).cumprod()
-    return {
-        "cagr": w.iloc[-1] ** (12 / len(r)) - 1,
-        "vol": r.std() * np.sqrt(12),
-        "maxdd": (w / w.cummax() - 1).min(),
-    }
-
-
 def evaluate(name: str) -> None:
-    t = d.loc["1926-07":].copy()
-    t["in"] = signals[name].loc[t.index]
-    t = t.dropna(subset=["R", "RF", "in"])
+    t = d.loc["1926-07":TEST_END].copy()
+    t["in"] = position_for_return(signals[name]).loc[t.index]
+    t = t.dropna(subset=["R", "CASH", "in"])
     sw = t["in"].diff().abs().fillna(0)
-    t["rule"] = t["in"] * t["R"] + (1 - t["in"]) * t["RF"] - sw * COST
-    print(f"\n=== {name}  {t.index[0]}..{t.index[-1]}  ({len(t)} months)")
-    for k in ("rule", "R"):
-        s = stats(t[k])
-        label = "rule" if k == "rule" else "index"
-        print(
-            f"  {label:5} CAGR {s['cagr']:6.2%}  vol {s['vol']:6.2%}  maxDD {s['maxdd']:7.2%}"
-        )
+    t["rule"] = t["in"] * t["R"] + (1 - t["in"]) * t["CASH"] - sw * COST
+    print(f"\n=== {name}  returns {t.index[0]}..{t.index[-1]}  ({len(t)} months)")
+    for k, label in (("rule", "rule"), ("R", "index")):
+        c, v, m = summary(t[k])
+        print(f"  {label:5} CAGR {c:6.2%}  vol {v:6.2%}  maxDD {m:7.2%}")
     print(f"  in cash {1 - t['in'].mean():.1%} of months; {int(sw.sum())} switches")
     m = (t["rule"] - t["R"]).values
-    n, nb = len(m), int(np.ceil(len(m) / BLOCK))
-    boots = np.array(
-        [
-            np.concatenate([m[s : s + BLOCK] for s in rng.integers(0, n - BLOCK, nb)])[
-                :n
-            ].mean()
-            * 12
-            for _ in range(DRAWS)
-        ]
-    )
+    b = block_bootstrap(m, BLOCK, DRAWS, rng)
     print(
         f"  paired difference {m.mean() * 12:+.2%}/yr, 90% band "
-        f"{np.quantile(boots, 0.05):+.2%} .. {np.quantile(boots, 0.95):+.2%}"
+        f"{np.quantile(b, 0.05):+.2%} .. {np.quantile(b, 0.95):+.2%}"
     )
-    for a, b in (("1926-07", "1975-12"), ("1976-01", None)):
-        h = t.loc[a:b] if b else t.loc[a:]
-        sr, si = stats(h["rule"]), stats(h["R"])
+    for a, z in (("1926-07", "1975-12"), ("1976-01", TEST_END)):
+        h = t.loc[a:z]
+        (cr, _, mr), (ci, _, mi) = summary(h["rule"]), summary(h["R"])
         print(
-            f"  half {h.index[0]}..{h.index[-1]}: rule {sr['cagr']:6.2%} (maxDD {sr['maxdd']:7.2%})"
-            f" vs index {si['cagr']:6.2%} (maxDD {si['maxdd']:7.2%})"
+            f"  half {h.index[0]}..{h.index[-1]}: rule {cr:6.2%} (maxDD {mr:7.2%})"
+            f" vs index {ci:6.2%} (maxDD {mi:7.2%})"
         )
-    cr = []
-    for lab, (a, b) in CRASHES.items():
-        h = t.loc[a:b]
-        if len(h):
-            cr.append(
-                f"{lab}: {(1 + h['rule']).prod() - 1:+.0%} vs {(1 + h['R']).prod() - 1:+.0%}"
-            )
-    print("  falls (rule vs index):", "; ".join(cr))
+    # R_t is earned mostly in month t+1: index the falls by that month.
+    earned = t.set_axis(t.index + 1)
+    print("  falls (rule/index):", falls(earned["rule"], earned["R"]))
     last = signals[name].dropna()
     print(
-        f"  latest computable signal ({last.index[-1]}): "
-        f"{'IN the index' if last.iloc[-1] else 'in CASH'}"
+        f"  latest complete-month signal ({last.index[-1]}, Shiller monthly average): "
+        f"{'IN' if last.iloc[-1] else 'CASH'}"
     )
-    if name == "A_ma10":
-        print(
-            f"    price {d['P'].iloc[-1]:,.0f} vs 10-month average {ma10.iloc[-1]:,.0f}"
-        )
-    else:
-        print(
-            f"    12-month index return to {eq12.dropna().index[-1]}: {eq12.dropna().iloc[-1] - 1:+.1%}"
-            f" vs T-bills {rf12.dropna().iloc[-1] - 1:+.1%} (to {rf12.dropna().index[-1]})"
-        )
 
 
 for sig in signals:
