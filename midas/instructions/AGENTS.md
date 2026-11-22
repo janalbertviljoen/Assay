@@ -115,8 +115,9 @@ did see a signal, so the letters come before the data mining.
 - editing baselines, reference values or tolerances to make a check pass, or
   generating reference values from the code under test and calling them independent;
 - judging a strategy on in-sample results only;
-- **access beyond the repository**: the rest of the machine (user profile, other
-  folders, credentials, keys) is off limits, also through the shell. API keys are read
+- **access beyond `~/Documents/Personal`**: the repository and the user's personal folder
+  around it, which agents may read, organise and back up (user, 2026-11-22), are open;
+  the rest of the machine (user profile, other folders, credentials, keys) is off limits, also through the shell. API keys are read
   from the environment at the command-line boundary only; raw vendor data stays in the
   git-ignored `data/` and is never committed or sent to another service.
 

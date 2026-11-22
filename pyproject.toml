@@ -19,6 +19,8 @@ core = [
 ]
 mcp = ["fastmcp>=2.0"]
 notebooks = ["ipykernel>=6.29"]
+# Reading the founder's private workbooks in data/private/ (S_202611_006).
+private = ["openpyxl>=3.1"]
 sandbox = [
     "ccxt>=4.0",
     "plotly>=5.20",
@@ -37,6 +39,7 @@ dev = [
     { include-group = "core" },
     { include-group = "mcp" },
     { include-group = "notebooks" },
+    { include-group = "private" },
     { include-group = "sandbox" },
     { include-group = "lint" },
     { include-group = "test" },

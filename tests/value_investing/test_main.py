@@ -10,7 +10,8 @@ import pytest
 from Toolbox.market_data.sources.constituents import CONSTITUENT_COLUMNS
 from Toolbox.skatkis.io.tables import write_table
 from Toolbox.skatkis.pipelines.validation import SchemaValidationError
-from Toolbox.value_investing.__main__ import _company_names, _read
+from Toolbox.value_investing.io import company_names as _company_names
+from Toolbox.value_investing.io import read_input as _read
 
 REPO = Path(__file__).resolve().parents[2]
 

@@ -96,3 +96,5 @@ until the portfolio engine (S_202610_006) replaces it. The index and the rename 
 | 2026-11-01 | The beta is a trust exercise among friends with private-repository access; a restricted `member` profile applies before any outside member (§3) | user |
 | 2026-11-01 | Ten picks per report for now; the worst list in Green, Amber and Red with "not a recommendation"; versioning and per-member storage wait (`assay/open_decisions.md`, VI_202611_002) | user |
 | 2026-11-01 | Midas's wordplay bank and classical traits are recorded in the character sheet (S_202611_002) | user |
+| 2026-11-19 | The steward hat (S_202611_006): a private Midas hat for the founder's own finances, by Munger's method, reasoning by inversion and warning once; its data, text and report only under the git-ignored `data/private/steward/`, never tracked, shared, indexed or in agent memory | user |
+| 2026-11-22 | Containment widened from the repository to `~/Documents/Personal` (the repository and the personal folder around it), which agents may read, organise and back up (`AGENTS.md`, `CLAUDE.md`, `guard.md`); the rest of the machine stays off limits | user |

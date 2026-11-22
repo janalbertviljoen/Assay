@@ -6,8 +6,8 @@ Assembles the value-investing report: buy-and-hold results with the report's tex
 The text (title, abstract, section texts and captions) is in
 ``config/report_value_investing.toml``, which the Scribe writes; this module fills
 its placeholders from the results, builds the tables (picks, wallets, sales, next
-picks, the worst list of the lowest scores, and the static tables of the missed
-winners, the testing, and the reading list) and the appendix of every
+picks, the buy list, the worst list of the lowest scores, and the static tables of the
+missed winners, the testing, and the reading list) and the appendix of every
 purchase, and places the figures. ``skatkis.report`` writes the LaTeX document.
 
 Owns
@@ -25,6 +25,14 @@ Peers(label, ranks, profile, summary)
     A peer group set against the picks.
 ReportInputs(held, managed, next_picks, worst, profile, weighting, peers, names, ...)
     What the report shows.
+BuyList(orders, states, settings, figure)
+    The personal buy list, each company's trend state and the trend figure.
+BuyReport(buy, next_picks, names, index_label, sectors, prices_figure, ...)
+    What the short buy report shows.
+buy_report_sections(inputs, text)
+    The short buy report's sections and the facts its text fills in.
+build_buy_report(inputs, text, *, folder, subtitle)
+    Write the short buy report's ``buy_report.tex`` and return its path.
 report_facts(inputs)
     The values of the text's placeholders.
 build_report(inputs, text, *, folder, subtitle)
@@ -32,7 +40,7 @@ build_report(inputs, text, *, folder, subtitle)
 
 Dependency rule
 ---------------
-pandas, ``skatkis.report`` and ``value_investing.holding``.
+pandas, ``skatkis.report``, ``value_investing.holding`` and ``value_investing.buy_list``.
 """
 
 from collections.abc import Callable, Mapping, Sequence
@@ -42,6 +50,7 @@ from typing import Any
 
 import pandas as pd
 
+from Toolbox.skatkis.financial_logic import TRADING_DAYS_PER_YEAR
 from Toolbox.skatkis.report import (
     Document,
     FigureGroup,
@@ -50,6 +59,7 @@ from Toolbox.skatkis.report import (
     Table,
     write_latex,
 )
+from Toolbox.value_investing.buy_list import MODEL, OWN, WEIGHTINGS
 from Toolbox.value_investing.holding import (
     MANAGED,
     WALLET,
@@ -99,6 +109,40 @@ class Peers:
     ranks: pd.DataFrame
     profile: pd.DataFrame
     summary: pd.DataFrame
+
+
+@dataclass(frozen=True)
+class BuyList:
+    """The personal buy list (VI_202611_003) with the trend of each company in it.
+
+    ``orders`` is ``value_investing.buy_list.buy_list`` output, ``states`` its
+    ``trend_states``; ``settings`` is ``[report.buy_list]`` of ``config/rules.toml`` with
+    the ``rate`` and ``rate_date`` the list used; ``figure`` the saved trend figure.
+    """
+
+    orders: pd.DataFrame
+    states: pd.DataFrame
+    settings: Mapping[str, Any]
+    figure: Path
+
+
+@dataclass(frozen=True)
+class BuyReport:
+    """What the short buy report shows: the next picks and the buy list.
+
+    ``sectors`` maps a GICS sector to its name in the text (``[sectors]``);
+    ``prices_figure`` is the next picks' price history over ``pick_years`` with the
+    earlier trades of the investor who started in ``pick_scenario``.
+    """
+
+    buy: BuyList
+    next_picks: pd.DataFrame
+    names: Mapping[str, str]
+    index_label: str
+    sectors: Mapping[str, str]
+    prices_figure: Path
+    pick_years: int
+    pick_scenario: int
 
 
 @dataclass(frozen=True)
@@ -183,6 +227,8 @@ class ReportInputs:
         ``rank``, ``symbol``, ``gics_sector``, ``score``, ``score_share`` of every
         scored company on the latest score date (``evaluation.ranking`` with the sector
         and the 0-to-1 score); the appendix listing it is left out when missing.
+    buy : BuyList, optional
+        The personal buy list; its section is left out when missing.
     """
 
     held: BuyAndHold
@@ -215,6 +261,7 @@ class ReportInputs:
     static_note: str = ""
     stress: pd.DataFrame | None = None
     ranking: pd.DataFrame | None = None
+    buy: BuyList | None = None
 
 
 def report_facts(inputs: ReportInputs, names: Mapping[str, str]) -> dict[str, str]:
@@ -291,6 +338,7 @@ def report_facts(inputs: ReportInputs, names: Mapping[str, str]) -> dict[str, st
         facts.update(_peer_facts(inputs, inputs.peers, names))
     facts.update(_lookahead_facts(inputs))
     facts.update(_stress_facts(inputs))
+    facts.update(_buy_list_facts(inputs.buy, inputs.names))
     reference = str(inputs.reference)
     facts["ref_start"] = reference
     for key in [k for k in list(facts) if k.endswith(f"_{reference}")]:
@@ -380,7 +428,12 @@ def _wallet_facts(inputs: ReportInputs) -> dict[str, str]:
 
 def _full(inputs: ReportInputs, symbol: str) -> str:
     """Return ``Full Name (SYMBOL)``, or the symbol alone when the name is unknown."""
-    name = inputs.names.get(symbol)
+    return _name(inputs.names, symbol)
+
+
+def _name(names: Mapping[str, str], symbol: str) -> str:
+    """Return ``Full Name (SYMBOL)`` from ``names``, or the symbol alone."""
+    name = names.get(symbol)
     return f"{name} ({symbol})" if name else symbol
 
 
@@ -563,6 +616,7 @@ def build_report(
                 )
             ],
         ),
+        *_buy_list_sections(inputs.buy, text, fill),
         Section(
             title=fill(text["missed"]["title"]),
             text=fill(text["missed"]["text"]),
@@ -741,6 +795,94 @@ def build_report(
         contents=False,
     )
     return write_latex(folder / "report.tex", document)
+
+
+def build_buy_report(
+    inputs: BuyReport, text: Mapping[str, Any], *, folder: Path, subtitle: str
+) -> Path:
+    """Write the short buy report's LaTeX into ``folder`` and return its path.
+
+    The next picks, the buy list and the trend of each company in it
+    (``[buy_report]`` and ``[buy_list]`` of the report text); no backtest.
+    """
+    sections, facts = buy_report_sections(inputs, text)
+    spec = text["buy_report"]
+
+    def fill(value: object) -> str:
+        return str(value).format(**facts)
+
+    document = Document(
+        title=fill(spec["title"]),
+        subtitle=subtitle,
+        abstract=fill(spec["abstract"]),
+        sections=sections,
+        contents=False,
+    )
+    return write_latex(folder / "buy_report.tex", document)
+
+
+def buy_report_sections(
+    inputs: BuyReport, text: Mapping[str, Any]
+) -> tuple[list[Section], dict[str, str]]:
+    """Return the short buy report's sections and the facts its text fills in.
+
+    The next picks with their price history, then the buy list and the price trends.
+    """
+    picks = inputs.next_picks
+    facts = {
+        "index": inputs.index_label,
+        "picks": str(len(picks)),
+        "pick_years": str(inputs.pick_years),
+        "pick_scenario": str(inputs.pick_scenario),
+        "next_score_date": f"{pd.Timestamp(picks['score_date'].iloc[0]):%d %B %Y}",
+        "next_picks": _listing([_name(inputs.names, str(s)) for s in picks["symbol"]]),
+        **_buy_list_facts(inputs.buy, inputs.names),
+    }
+
+    def fill(value: object) -> str:
+        return str(value).format(**facts)
+
+    spec = text["buy_report"]
+    sections = [
+        Section(
+            title=fill(spec["picks_title"]),
+            text=fill(spec["picks_text"]),
+            table=replace(
+                _picks_table_brief(picks, inputs.names, inputs.sectors),
+                caption=fill(spec["picks_caption"]),
+                label="tab:next",
+            ),
+            figures=[
+                ReportFigure(
+                    inputs.prices_figure,
+                    fill(text["next"]["prices_figure"]),
+                    label="fig:next-prices",
+                )
+            ],
+        ),
+        *_buy_list_sections(inputs.buy, text, fill),
+    ]
+    return sections, facts
+
+
+def _picks_table_brief(
+    picks: pd.DataFrame, names: Mapping[str, str], sectors: Mapping[str, str]
+) -> Table:
+    """Return the next picks, named in full, with their sector and scores."""
+    rows = [
+        [
+            _name(names, str(r["symbol"])),
+            sectors.get(str(r["gics_sector"]), str(r["gics_sector"])),
+            f"{float(r['score']):.1f}",
+            f"{float(r['score_share']):.2f}",
+        ]
+        for r in picks.to_dict("records")
+    ]
+    return Table(
+        header=["Company", "Sector", "Score", "Score 0 to 1"],
+        rows=rows,
+        columns="l l r r",
+    )
 
 
 def _stress_sections(
@@ -1073,6 +1215,154 @@ def _next_table(inputs: ReportInputs, sectors: Mapping[str, str]) -> Table:
         header=["Company", "Sector", "Score", "Score 0 to 1", "Weight", "USD"],
         rows=rows,
         columns="l l r r r r",
+    )
+
+
+def _buy_list_facts(buy: BuyList | None, names: Mapping[str, str]) -> dict[str, str]:
+    """Return the buy list's totals and the companies bought outside the model."""
+    if buy is None:
+        return {}
+    orders = buy.orders
+    own = orders[orders["choice"] == OWN]
+    picks = orders[orders["choice"] == MODEL]
+    settings = buy.settings
+    currency = str(settings["currency"])
+    own_picks = _listing(
+        [
+            f"{_name(names, str(r['symbol']))} "
+            f"({float(r['score_amount']):,.0f} {currency})"
+            for r in own.to_dict("records")
+        ]
+    )
+    first, last = (float(v) for v in settings["rank_ramp"])
+    rank_part, dip_part = (float(v) for v in settings["blend"])
+    rate_date = f"{pd.Timestamp(settings['rate_date']):%d %B %Y}"
+    return {
+        "trend_days": str(settings["trend_days"]),
+        "slide": f"{float(settings['slide']):.0%}",
+        "trend_years": str(settings["years"]),
+        "slope_years": str(settings["slope_years"]),
+        "range_years": f"{int(settings['range_days']) / TRADING_DAYS_PER_YEAR:.0f}",
+        "currency": currency,
+        "ramp_ratio": f"{first / last:g}",
+        "blend_parts": (
+            f"{rank_part:g} parts rank to {dip_part:g} "
+            f"part{'s' if dip_part != 1 else ''} dip"
+        ),
+        "buy_total": f"{float(orders['score_amount'].sum()):,.0f}",
+        "picks_amount": f"{float(picks['score_amount'].sum()):,.0f}",
+        "own_added": (
+            f", with {own_picks} added as the investor's own choice"
+            if own_picks
+            else ""
+        ),
+        "own_clause": (
+            f", and {own_picks}, the investor's own choice outside the model"
+            if own_picks
+            else ""
+        ),
+        "rate_clause": (
+            f"The money is turned into USD at {float(settings['rate']):.2f} {currency} "
+            f"per USD, the rate of {rate_date}, and buys"
+            if currency != "USD"
+            else "The money buys"
+        ),
+    }
+
+
+def _buy_list_sections(
+    buy: BuyList | None, text: Mapping[str, Any], fill: Callable[[object], str]
+) -> list[Section]:
+    """Return the buy-list section, or none when the report has no buy list."""
+    if buy is None:
+        return []
+    spec = text["buy_list"]
+    return [
+        Section(
+            title=fill(spec["title"]),
+            text=fill(spec["text"]),
+            table=replace(
+                _buy_list_table(buy.orders, str(buy.settings["currency"])),
+                caption=fill(spec["table_caption"]),
+                label="tab:buy-list",
+            ),
+            subsections=[
+                Section(
+                    title=fill(spec["trend_title"]),
+                    text=fill(spec["trend_text"]),
+                    table=replace(
+                        _trend_table(buy.states),
+                        caption=fill(spec["trend_caption"]),
+                        label="tab:trends",
+                    ),
+                    figures=[
+                        ReportFigure(
+                            buy.figure,
+                            fill(spec["trend_figure"]),
+                            label="fig:trends",
+                        )
+                    ],
+                )
+            ],
+            label="sec:buy-list",
+        )
+    ]
+
+
+def _buy_list_table(orders: pd.DataFrame, currency: str) -> Table:
+    """Return the money of each weighting per company, with the totals."""
+    rows: list[list[str]] = []
+    for r in orders.to_dict("records"):
+        score = float(r["score"])
+        row = [
+            str(r["symbol"]),
+            "own choice" if r["choice"] == OWN else f"{score:.1f}",
+            f"{float(r['in_range']):.2f}",
+        ]
+        row += [f"{float(r[f'{w}_amount']):,.0f}" for w in WEIGHTINGS]
+        rows.append(row)
+    rows.append(
+        ["Total", "", ""]
+        + [f"{float(orders[f'{w}_amount'].sum()):,.0f}" for w in WEIGHTINGS]
+    )
+    header = ["Company", "Score", "In range"]
+    header += [f"By {w} ({currency})" for w in WEIGHTINGS]
+    return Table(
+        header=header,
+        rows=rows,
+        columns="l r r" + " r" * len(WEIGHTINGS),
+        breaks=[len(orders[orders["choice"] == MODEL]) - 1, len(orders) - 1],
+    )
+
+
+def _trend_table(states: pd.DataFrame) -> Table:
+    """Return each company's distance from its high and trend mean, slopes and state."""
+    rows = [
+        [
+            str(r["symbol"]),
+            f"{float(r['price']):,.2f}",
+            f"{float(r['from_high']):+.0%}",
+            f"{float(r['from_trend']):+.0%}",
+            f"{float(r['in_range']):.2f}",
+            f"{float(r['slope_before']):+.0%}",
+            f"{float(r['slope']):+.0%}",
+            str(r["state"]),
+        ]
+        for r in states.to_dict("records")
+    ]
+    return Table(
+        header=[
+            "Company",
+            "Close",
+            "From high",
+            "From trend",
+            "In range",
+            "Slope a month ago",
+            "Slope now",
+            "State",
+        ],
+        rows=rows,
+        columns="l r r r r r r l",
     )
 
 

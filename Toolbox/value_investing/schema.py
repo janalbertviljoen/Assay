@@ -34,6 +34,8 @@ KEY
     The grain of the buyability table: ``symbol``, ``date``.
 INPUT_TABLES
     The stored tables the pipeline reads, with their schemas.
+REPORT_TABLES
+    The stored tables only the reports read, with their schemas.
 pipeline_schema(rule_ids, *, buckets)
     The ``PipelineSchema`` for the configured rules.
 buyability_schema(pipeline)
@@ -48,6 +50,7 @@ from collections.abc import Sequence
 
 from Toolbox.market_data.sources.constituents import CHANGE_SCHEMA, CONSTITUENT_SCHEMA
 from Toolbox.market_data.sources.edgar import FACTS_TABLE_SCHEMA
+from Toolbox.market_data.sources.fred import OBSERVATION_SCHEMA
 from Toolbox.market_data.sources.prices import (
     DIVIDEND_SCHEMA,
     LISTING_SCHEMA,
@@ -90,6 +93,11 @@ INPUT_TABLES: dict[str, Schema] = {
 }
 """The stored tables the pipeline reads, by table name, with the schema each is checked
 against when read; the schemas are owned by the ``market_data`` source modules."""
+
+REPORT_TABLES: dict[str, Schema] = {"observations": OBSERVATION_SCHEMA}
+"""Stored tables only the reports read (the exchange rate of the buy list,
+VI_202611_003), checked against their schema like ``INPUT_TABLES``; kept apart so the
+pipeline's inputs stay exactly what it reads."""
 
 # A rule's flag: 1 passed, 0 failed, missing when not evaluable (value_investing.flags).
 _FLAG = type_float | allowed_values({0.0, 1.0})

@@ -209,6 +209,17 @@ change: a new rule, to be tested as a hypothesis out-of-sample (the researcher, 
 the broader universe of MD_202610_004), not set by looking at today's picks. The price
 history in the report (VI_202610_007) shows the problem first.
 
+A dip rule to test later (user, 2026-11-19): six bins, the price above or below its
+200-day mean times the slope of the smoothed log price falling, slowing or rising, with
+the points per bin fitted by the calibration, not set by hand; first used only to weight
+the picks the score chooses. Momentum studies point the other way (losers over 3 to 12
+months tend to keep losing), so it must beat the present weighting on held-out years.
+For now the curves are shown beside the picks only (→ VI_202611_003).
+The window matters (2026-11-19): over 2 years a pick recovering steadily from an old fall
+(EW, SWKS) reads as near its high; over 5 years it reads as still well below its earlier
+price, which is the user's case for buying it (a return towards earlier valuations). The
+buy list uses 5 years; a test should compare both windows.
+
 ### Rule weighting strategies (2026-11-01, open, priority low → VI_202611_001)
 
 Gating belongs here too (user, 2026-11-01): the plain score stays; gates and weights are
