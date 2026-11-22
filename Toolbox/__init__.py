@@ -1,1 +1,1 @@
-"""Code of the trading bot: shared core, tools and sandbox."""
+"""Code of Assay: shared core, tools and sandbox."""

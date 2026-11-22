@@ -8,12 +8,14 @@ Run from the repository root, after the value tool has scored the as-of date::
     .venv/bin/python -m Toolbox.value_investing buyability --as-of 2026-11-19 --no-plots
     .venv/bin/python -m Toolbox.steward report --as-of 2026-11-19
 
-It reads the private finances (``data/private/steward/finances.toml``), the value tool's
-picks and buy list for the index (``value_investing.io.buy_report_inputs``, with the
-private amounts), builds the figures and the LaTeX in a temporary folder under that
-private folder, and keeps only
-``data/private/steward/reports/<as_of>/personal_report.pdf``. Nothing is written to the
-tracked ``results/``.
+It reads the private finances (``finances.toml``) and the report's text
+(``report_text.toml``) from the private workspace ``--private-dir`` (default
+``../Finances``: ``~/Documents/Personal/Finances/``, the private repository around this
+public one), the value tool's picks and buy list for the index
+(``value_investing.io.buy_report_inputs``, with the private amounts), builds the figures
+and the LaTeX in a temporary folder there, and keeps only
+``<private-dir>/reports/<as_of>/personal_report.pdf``. Nothing private is written inside
+this repository.
 
 Owns
 ----
@@ -22,7 +24,7 @@ The command-line interface and the private report's location.
 Must not
 --------
 Project, summarise or format (``steward.projection``, ``steward.report``); write
-anywhere but ``data/private/``.
+anywhere but the private workspace.
 
 Public API
 ----------
@@ -61,12 +63,13 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 
 def _report(args: argparse.Namespace) -> int:
-    """Write the personal report and keep only its PDF under ``data/private/``."""
-    finances = parse_finances(load_config(args.finances))
+    """Write the personal report and keep only its PDF in the private workspace."""
+    private: Path = args.private_dir
+    finances = parse_finances(load_config(args.finances or private / "finances.toml"))
     rules = load_config(args.rules)
-    target = args.data_dir / "private" / "steward" / "reports" / args.as_of.isoformat()
+    target = private / "reports" / args.as_of.isoformat()
     target.mkdir(parents=True, exist_ok=True)
-    # The build (figures, LaTeX) stays under data/private/, removed afterwards.
+    # The build (figures, LaTeX) stays in the private workspace, removed afterwards.
     with tempfile.TemporaryDirectory(dir=target) as build:
         folder = Path(build)
         buy = buy_report_inputs(
@@ -105,7 +108,7 @@ def _report(args: argparse.Namespace) -> int:
         )
         tex = report.build_personal_report(
             report.PersonalReport(finances, buy, usd_rate, figure),
-            load_config(args.text),
+            load_config(args.text or private / "report_text.toml"),
             load_config(args.value_text),
             folder=folder,
             subtitle=(
@@ -139,12 +142,24 @@ def _parser() -> argparse.ArgumentParser:
     command.add_argument("--index", default="sp500")
     command.add_argument("--data-dir", type=Path, default=Path("data"))
     command.add_argument(
-        "--finances", type=Path, default=Path("data/private/steward/finances.toml")
+        "--private-dir",
+        type=Path,
+        default=Path("../Finances"),
+        help="the private workspace (the private repository's Finances/)",
+    )
+    command.add_argument(
+        "--finances",
+        type=Path,
+        default=None,
+        help="default: <private-dir>/finances.toml",
     )
     command.add_argument("--rules", type=Path, default=Path("config/rules.toml"))
     command.add_argument("--indices", type=Path, default=Path("config/indices.toml"))
     command.add_argument(
-        "--text", type=Path, default=Path("data/private/steward/report_text.toml")
+        "--text",
+        type=Path,
+        default=None,
+        help="default: <private-dir>/report_text.toml",
     )
     command.add_argument(
         "--value-text", type=Path, default=Path("config/report_value_investing.toml")

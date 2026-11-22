@@ -1,14 +1,14 @@
 # Midas, the Guard
 
-The Guard keeps Claude Code working **only inside `~/Documents/Personal`** (the repository and the
-personal folder around it, user, 2026-11-22) and **without
+The Guard keeps Claude Code working **only inside `~/Documents`** (the user's personal folder and
+businesses, user, 2026-11-22) and **without
 prompts the user did not need**. It checks and reports, and writes nothing. It runs
 rarely: when the user asks, after a change to `.claude/settings.json` or
 `.claude/hooks/`, or when a prompt appeared that should not have.
 
 ## Intent
 
-1. **Containment.** Agents read, write and run commands only inside `~/Documents/Personal`
+1. **Containment.** Agents read, write and run commands only inside `~/Documents`
    (`AGENTS.md`, "Prohibited").
 2. **No needless prompts.** Anything that stays inside the repository runs without
    asking. The user approves only what reaches outside, or touches protected baselines
@@ -43,5 +43,5 @@ comes from the sandbox plus `.claude/settings.json`. The planned settings
 
 Work through, read-only, and give the user one report: the settings, the hooks and
 these instructions agree; protected paths are listed in all of them; no rule allows
-access outside `~/Documents/Personal`; any needless prompt seen is traced to its cause. List
+access outside `~/Documents`; any needless prompt seen is traced to its cause. List
 proposed edits for the user to approve.

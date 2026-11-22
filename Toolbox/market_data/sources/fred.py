@@ -60,7 +60,7 @@ from Toolbox.skatkis.pipelines.schema import (
 
 API_URL = "https://api.stlouisfed.org/fred/series/observations"
 CSV_URL = "https://fred.stlouisfed.org/graph/fredgraph.csv"
-USER_AGENT = "Mozilla/5.0 (compatible; trading-bot research)"
+USER_AGENT = "Mozilla/5.0 (compatible; Assay research)"
 MISSING = {"", "."}
 
 OBSERVATION_COLUMNS: dict[str, str] = {
