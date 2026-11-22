@@ -1,0 +1,29 @@
+# file	shelf	title	licence	url
+lefevre_1923_reminiscences_of_a_stock_operator.txt	classics	Lefevre (1923), Reminiscences of a Stock Operator	public domain (US), Gutenberg 60979	https://www.gutenberg.org/ebooks/60979.txt.utf-8
+selden_1912_psychology_of_the_stock_market.txt	classics	Selden (1912), Psychology of the Stock Market	public domain (US), Gutenberg 75570	https://www.gutenberg.org/ebooks/75570.txt.utf-8
+mackay_1841_extraordinary_popular_delusions.txt	classics	Mackay (1841), Memoirs of Extraordinary Popular Delusions and the Madness of Crowds	public domain, Gutenberg 24518	https://www.gutenberg.org/ebooks/24518.txt.utf-8
+butler_successful_stock_speculation.txt	classics	Butler, Successful Stock Speculation	public domain (US), Gutenberg 26841	https://www.gutenberg.org/ebooks/26841.txt.utf-8
+psychology_of_speculation.txt	classics	The Psychology of Speculation	public domain (US), Gutenberg 73647	https://www.gutenberg.org/ebooks/73647.txt.utf-8
+crump_1887_theory_of_stock_exchange_speculation.txt	classics	Crump (1887), The Theory of Stock Exchange Speculation	public domain, Gutenberg 59518	https://www.gutenberg.org/ebooks/59518.txt.utf-8
+hamilton_1922_stock_market_barometer.txt	classics	Hamilton (1922), The Stock Market Barometer (Dow theory)	public domain (US, 1922); HathiTrust text via Distant Reader	https://distantreader.org/stacks/trust/uc2/uc2_ark+=13960=t42r3r118.txt
+bachelier_1900_theorie_de_la_speculation.pdf	classics	Bachelier (1900), Theorie de la speculation	public domain; Numdam scan (mirror)	https://controverses.minesparis.psl.eu/public/promo14/promo14_G14/archive.numdam.org/ARCHIVE/ASENS/ASENS_1900_3_17_/ASENS_1900_3_17__21_0/ASENS_1900_3_17__21_0.pdf
+goyal_welch_2004_equity_premium_prediction.pdf	papers	Goyal and Welch (2004), A Comprehensive Look at the Empirical Performance of Equity Premium Prediction	NBER working paper w10483, free	https://www.nber.org/system/files/working_papers/w10483/w10483.pdf
+campbell_thompson_2005_predicting_equity_premium.pdf	papers	Campbell and Thompson (2005), Predicting the Equity Premium Out of Sample	NBER working paper w11468, free	https://www.nber.org/system/files/working_papers/w11468/w11468.pdf
+campbell_shiller_2001_valuation_ratios.pdf	papers	Campbell and Shiller (2001), Valuation Ratios and the Long-Run Stock Market Outlook: An Update	NBER working paper w8221, free	https://www.nber.org/system/files/working_papers/w8221/w8221.pdf
+frazzini_kabiller_pedersen_buffetts_alpha.pdf	papers	Frazzini, Kabiller and Pedersen, Buffett's Alpha	NBER working paper w19681, free	https://www.nber.org/system/files/working_papers/w19681/w19681.pdf
+frazzini_pedersen_betting_against_beta.pdf	papers	Frazzini and Pedersen, Betting Against Beta	NBER working paper w16601, free	https://www.nber.org/system/files/working_papers/w16601/w16601.pdf
+harvey_liu_zhu_cross_section.pdf	papers	Harvey, Liu and Zhu, ... and the Cross-Section of Expected Returns	NBER working paper w20592, free	https://www.nber.org/system/files/working_papers/w20592/w20592.pdf
+lo_mamaysky_wang_technical_analysis.pdf	papers	Lo, Mamaysky and Wang, Foundations of Technical Analysis	NBER working paper w7613, free	https://www.nber.org/system/files/working_papers/w7613/w7613.pdf
+hou_xue_zhang_replicating_anomalies.pdf	papers	Hou, Xue and Zhang, Replicating Anomalies	NBER working paper w23394, free	https://www.nber.org/system/files/working_papers/w23394/w23394.pdf
+novy_marx_other_side_of_value.pdf	papers	Novy-Marx, The Other Side of Value: Gross Profitability	NBER working paper w15940, free	https://www.nber.org/system/files/working_papers/w15940/w15940.pdf
+hurst_ooi_pedersen_2017_century_trend_following.pdf	papers	Hurst, Ooi and Pedersen (2017), A Century of Evidence on Trend-Following Investing	author/course copy (JPM 2017)	https://fairmodel.econ.yale.edu/ec439/hurst.pdf
+moskowitz_ooi_pedersen_time_series_momentum.pdf	papers	Moskowitz, Ooi and Pedersen, Time Series Momentum	author copy	https://pages.stern.nyu.edu/~lpederse/papers/TimeSeriesMomentum.pdf
+asness_moskowitz_pedersen_value_momentum_everywhere.pdf	papers	Asness, Moskowitz and Pedersen, Value and Momentum Everywhere	author copy	https://pages.stern.nyu.edu/~lpederse/papers/ValMomEverywhere.pdf
+bailey_borwein_lopezdeprado_zhu_2014_backtest_overfitting.pdf	papers	Bailey, Borwein, Lopez de Prado and Zhu (2014), Pseudo-Mathematics and Financial Charlatanism	Notices of the AMS, free	https://www.ams.org/notices/201405/rnoti-p458.pdf
+kakushadze_2016_101_formulaic_alphas.pdf	papers	Kakushadze (2016), 101 Formulaic Alphas	arXiv 1601.00991	https://arxiv.org/pdf/1601.00991
+shiller_ie_data.xls	data	Shiller, US stock market since 1871 (current file; the snapshot of 2026-11-22 runs to 2026-11)	free from the author	https://img1.wsimg.com/blobby/go/e5e77e0b-59d1-44d9-ab25-4763ac982e53/downloads/249997aa-1eef-4237-93ec-2d319f7881ab/ie_data.xls?ver=1794837439406
+shiller_ie_data_yale_to_2023_09.xls	data	Shiller, stale Yale copy (to 2023-09), kept for reference	free from the author	http://www.econ.yale.edu/~shiller/data/ie_data.xls
+damodaran_histimpl.xls	data	Damodaran, historical implied equity risk premium, US, since 1960	free from the author	https://www.stern.nyu.edu/~adamodar/pc/datasets/histimpl.xls
+ff_research_factors_monthly.zip	data	Fama-French 3 factors and risk-free rate, monthly since 1926	free, Kenneth French Data Library	https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/F-F_Research_Data_Factors_CSV.zip
+ff_5_factors_monthly.zip	data	Fama-French 5 factors (2x3), monthly since 1963	free, Kenneth French Data Library	https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/F-F_Research_Data_5_Factors_2x3_CSV.zip
+ff_momentum_monthly.zip	data	Momentum factor, monthly since 1927	free, Kenneth French Data Library	https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/F-F_Momentum_Factor_CSV.zip

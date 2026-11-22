@@ -142,6 +142,144 @@ Spec §1.3 prescribes Google style; the user chose the numpydoc structure of
 asks for `ruff format --check`, where the repository uses Black (warden, S_202611_001,
 2026-11-01); a spec decision for the scribe.
 
+### A strategy library to analyse other strategies (2026-11-22, open)
+
+The user wants a library of trading-strategy and market texts as the basis for analysing
+other strategies. A first snapshot sits in the git-ignored `data/raw/library/2026-11-22/`
+with a `manifest.tsv` (title, licence, URL, size, SHA-256 per file); private use only,
+never committed or redistributed, like the Berkshire letters.
+
+- **Fetched (20):**
+  - classics: Hamilton (1922, Dow theory), Bachelier (1900);
+  - papers: equity-premium prediction (Goyal and Welch; Campbell and Thompson; Campbell
+    and Shiller); factors (Buffett's Alpha, Betting Against Beta, gross profitability,
+    value and momentum everywhere); trend (a century of trend following, time-series
+    momentum); technical analysis (Lo, Mamaysky and Wang); multiple testing (Harvey, Liu
+    and Zhu; Hou, Xue and Zhang); 101 Formulaic Alphas;
+  - data: Shiller (since 1871, with CAPE and the 10-year rate), Damodaran's implied
+    equity risk premium (since 1960), Fama-French factors and momentum (since 1926).
+- **Still to fetch (7):** six Project Gutenberg books (Lefevre, Selden, Mackay, Butler,
+  *The Psychology of Speculation*, Crump) and the backtest-overfitting paper (Notices of
+  the AMS); the sandbox proxy refuses those hosts.
+- **Text:** extracted with `pypdf` (`Toolbox/SandBox/strategy_library/extract_text.py`)
+  into `data/interim/library/2026-11-22/`. The sandbox could not install it, so the user
+  installed `xlrd` and `pypdf` and regenerated the pins with `pip freeze` (the `library`
+  dependency group).
+- **Copyrighted books** are bought and added under `purchased/`, never downloaded from
+  unauthorised copies (user's private use does not change that; 2026-11-22).
+
+### Valuation spread as a sell-everything signal (2026-11-22, diagnostic, not adopted)
+
+Question (user): when to sell the shares and hold USD cash, from the spread between the
+S&P 500's earnings yield and the 10-year Treasury yield. Run on Shiller's current file
+(1871–2026-11) with the Fama-French T-bill rate from 1926; design fixed before the run
+(earnings lagged 3 months, hold cash when the spread is below the 20th percentile of its
+history to date, 0.5% per switch, 36-month horizon, block bootstrap); two specifications
+tried (`Toolbox/SandBox/valuation_spread/`). Figures after the Warden's timing fix (a signal
+trades from the following month; returns 1926-07 to 2026-08).
+
+- **Earnings yield less the nominal 10-year yield:** worse than holding, $8.10\%$ against
+  $10.50\%$ a year; paired difference $-2.64\%$ a year (90% band $-4.54\%$ to $-0.53\%$); in
+  cash 48% of the months, out from 1980 to 2003; out-of-sample $R^2 = -0.027$. It compares a
+  real yield with a nominal one, so high inflation reads as "expensive".
+- **Shiller's excess CAPE yield (real):** no difference, $-0.19\%$ a year (band $-1.52\%$
+  to $+1.09\%$), lower drawdown ($-71\%$ against $-82\%$), in cash 8.5%; it exited
+  1929, 1937 and 1997–2002 but not 2008 or 2020; out-of-sample $R^2 = +0.017$, small, in
+  line with Campbell and Thompson.
+- **Latest complete month (2026-10):** the excess CAPE yield is $+1.21\%$, at its 21st
+  percentile, just above the exit line ($+1.11\%$); CAPE about 39. Expensive, so lower
+  expected returns, but no timing edge.
+- **The records agree:** Goyal and Welch (2004), none of the predictors beat the
+  historical mean out of sample; Campbell and Thompson (2005), small but usable once the
+  forecast is restricted; Campbell and Shiller warned in 1996 and the market rose for
+  years; Buffett does not forecast rates or time the market (1994, 2019).
+- **Biases:** Shiller prices are monthly averages (the first run traded on returns that
+  began half a month before the signal: a look-ahead, removed); missing recent dividends
+  carried forward; pre-1926 earnings reconstructed; one market; no taxes.
+
+Open: a partial tilt (less equity when expensive) rather than all-or-nothing, and trend
+following (Hurst, Ooi and Pedersen), which did well in the crashes valuation missed.
+
+### Trend following as the sell rule (2026-11-22, diagnostic, not adopted)
+
+Design fixed before the run (`Toolbox/SandBox/trend_following/design.md`): S&P 500 from
+Shiller's monthly data, cash at the Fama-French T-bill rate, 0.5% per switch; two
+specifications. Figures after the Warden's timing fix (returns 1926-07 to 2026-08). The
+first run, on returns that began half a month before each signal, showed rule A ahead of
+the index (11.16% against 10.50%); that was the look-ahead.
+
+| Rule | Return a year | Index | Volatility (index 15.3%) | Worst fall (index −82%) | In cash |
+|---|---|---|---|---|---|
+| A, price above its 10-month average | 9.32% | 10.50% | 10.2% | −50% | 31% |
+| B, 12-month return above T-bills | 8.55% | 10.35% | 10.6% | −50% | 29% |
+
+- **Return: a cost.** Paired difference $-1.72\%$ a year for A (90% band $-3.34\%$ to
+  $+0.12\%$) and $-2.25\%$ for B ($-4.00\%$ to $-0.36\%$, excludes zero).
+- **Risk:** the worst fall roughly halves, in both halves of the century (1976–2026: $-25\%$
+  for A against $-49\%$). Falls, A against the index: 1929–32 $-33\%$ / $-81\%$, 2000–02
+  $-3\%$ / $-38\%$, 2007–09 $-2\%$ / $-46\%$, 2022 $-6\%$ / $-17\%$; 2020 $-19\%$ / $-19\%$ (a
+  sharp V gives a trend rule no time).
+- **Latest complete month:** both rules in the index (A at 2026-10, B at 2026-09; Shiller's
+  November figure is a partial-month average and is not used).
+- **Biases:** missing recent dividends carried forward; one market; no taxes (a switch in a
+  taxable account realises gains, a switch inside a tax-free account does not).
+- Bugs found and fixed before or after reporting: a missing T-bill value read as "cash"
+  (before); the half-month look-ahead, a partial month shown as the current signal, an end
+  date set by the T-bill file, a control on longer dates, and a bootstrap that could not
+  draw the last block (after the Warden).
+
+Second test, technology (design fixed before the fetch): month-end closes of QQQ, XLK and
+NVDA from Yahoo (returns from about 2000 to 2026-09, `fetch_tech.py`, own snapshot root),
+SPY as the control on the same months; six specifications.
+
+| Series | Rule A (10-month): return / worst fall | Rule B (12-month): return / worst fall | Holding: return / worst fall | Paired, A / B (90% band) |
+|---|---|---|---|---|
+| QQQ | 8.8% / −37% | 8.3% / −43% | 8.8% / −81% | $-1.7\%$ ($-7.1$ to $+3.6$) / $-1.1\%$ ($-6.4$ to $+1.1$) |
+| XLK | 9.2% / −43% | 10.9% / −28% | 9.9% / −81% | $-2.1\%$ ($-5.9$ to $+2.2$) / $+0.5\%$ ($-4.8$ to $+3.4$) |
+| NVDA | 38.1% / −58% | 27.7% / −79% | 37.6% / −87% | $-6.3\%$ ($-10.0$ to $+2.1$) / $-12.2\%$ ($-20.7$ to $-6.1$) |
+| SPY (control) | 7.4% / −24% | 8.4% / −20% | 8.2% / −51% | $-1.4\%$ ($-5.4$ to $+2.4$) / $-0.3\%$ ($-4.3$ to $+2.0$) |
+
+- On the funds: no reliable gain, the worst fall roughly halved (2000–02 on QQQ: $-33\%$
+  for A against $-81\%$).
+- On Nvidia, rule B cost $12.2\%$ a year, its band excluding zero: a single volatile share
+  whipsaws a trend rule.
+- **Latest complete month:** every series in (A at the 2026-10 close, B at 2026-09). The
+  partial November, to 2026-11-20 and not a signal, has every series below its 10-month
+  average (QQQ $-10\%$, XLK $-12\%$, NVDA $-37\%$, SPY $-5\%$).
+- **Events (quant.md 14), a hypothesis:** from the 2026-10-06 highs to 2026-11-20, SPY
+  $-11.5\%$, QQQ $-20\%$, XLK $-26\%$, NVDA $-47.5\%$; the daily path shows no split artefact.
+  Press reports (Yahoo Finance and others, 2026-11-20) attribute the fall to an AI-led
+  sell-off after the 3 November election and the departure of Nvidia's chief executive;
+  not tested here.
+
+Count across VI_202611_005: ten specifications (two valuation, two S&P trend, six
+technology; the control not counted). The bands are not adjusted for this multiple testing.
+
+### Market valuations by region (2026-11-22, reading)
+
+MSCI index factsheets at 2026-10-30, USD, one method (git-ignored snapshot
+`data/raw/index_sheets/2026-11-22/`; the MSCI World sheet served was stale, July 2022, so
+World is taken from the comparison rows of the other sheets).
+
+| MSCI index | Dividend yield | P/E | Forward P/E | Price/book |
+|---|---|---|---|---|
+| USA Information Technology | 0.55% | 33.96 | 18.98 | 12.64 |
+| USA | 1.13% | 24.74 | 18.70 | 5.58 |
+| World | 1.54% | 22.29 | 17.38 | 4.06 |
+| ACWI | 1.61% | 20.82 | 15.64 | 3.71 |
+| India | 1.35% | 21.95 | 18.45 | 3.09 |
+| Japan | 1.94% | 18.52 | 14.62 | 1.93 |
+| EMU | 2.84% | 17.38 | 13.83 | 2.23 |
+| United Kingdom | 3.11% | 14.20 | 12.05 | 2.35 |
+| Emerging Markets | 2.19% | 13.68 | 8.70 | 2.20 |
+| China | 2.63% | 11.96 | 9.32 | 1.29 |
+
+- US technology's trailing P/E falls to its forward P/E only if profits rise about 80%;
+  elsewhere the gap implies 20–30%, partly a definition gap (reported against analysts'
+  estimates). The price leans on forecast earnings.
+- A low P/E is a rough guide to a higher long-run return, not to timing (the valuation
+  spread above); cheaper markets have trailed the US for about 15 years.
+
 ## Open methodology questions
 
 ### EDGAR history is too short for the long Graham windows (2026-10-31, → VI_202610_002)
